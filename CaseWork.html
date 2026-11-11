@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Queue Management System</title>
+<style>
+:root{--accent:#2563eb;--accent-d:#1d4ed8;--bg:#f3f5fa;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--radius:12px}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+button,input,select,textarea{font:inherit}
+h1,h2,h3{margin:0 0 .6em}
+h2{font-size:1.15rem}h3{font-size:1rem;margin-top:1.2em}
+.muted{color:var(--muted);font-size:.88rem}
+/* header */
+.top{display:flex;align-items:center;gap:16px;background:#0f172a;color:#fff;padding:10px 20px;position:sticky;top:0;z-index:20;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:.3px;font-size:1.05rem}
+.brand small{display:block;font-weight:500;color:#94a3b8;font-size:.72rem;letter-spacing:.5px}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav button{background:transparent;color:#cbd5e1;border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.nav button:hover{background:#1e293b;color:#fff}
+.nav button.on{background:var(--accent);color:#fff}
+.top .sp{flex:1}
+.clock{font-variant-numeric:tabular-nums;color:#cbd5e1;font-size:.9rem;text-align:right}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.pill.open{background:#dcfce7;color:#166534}.pill.closed{background:#fee2e2;color:#991b1b}
+.who{font-size:.85rem;color:#e2e8f0}
+.who b{color:#fff}
+main{padding:20px;max-width:1500px;margin:0 auto}
+/* cards & layout */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+.stack{display:flex;flex-direction:column;gap:18px}
+.row2,.row3,.row4{display:grid;gap:12px;margin-bottom:12px}
+.row2{grid-template-columns:1fr 1fr}.row3{grid-template-columns:1fr 1fr 1fr}.row4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:980px){.grid2{grid-template-columns:1fr}.row3,.row4{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.row2,.row3,.row4{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;gap:5px;font-size:.84rem;font-weight:600;color:#334155}
+input,select,textarea{border:1px solid #cbd5e1;border-radius:8px;padding:9px 11px;background:#fff;color:var(--ink);min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);border-color:var(--accent)}
+input[readonly]{background:#f1f5f9;color:#475569}
+label.chk{flex-direction:row;align-items:center;gap:8px;font-weight:500}
+label.chk input{width:17px;height:17px}
+.btn{border:1px solid #cbd5e1;background:#fff;color:var(--ink);padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn:hover{background:#f8fafc}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-d)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.warn{background:var(--warn);border-color:var(--warn);color:#fff}
+.btn.bad{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.big{padding:13px 20px;font-size:1.05rem;width:100%}
+.btn.sm{padding:4px 9px;font-size:.8rem;border-radius:6px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat .k{font-size:.74rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700}
+.stat .v{font-size:1.45rem;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+/* tables */
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:#f8fafc;font-size:.74rem;text-transform:uppercase;letter-spacing:.4px;color:#475569;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.num{font-weight:800;font-family:ui-monospace,Consolas,monospace;font-size:.95rem;letter-spacing:.5px}
+.st{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.75rem;font-weight:700}
+.st-Waiting{background:#e0f2fe;color:#075985}.st-Called{background:#fef3c7;color:#92400e}.st-Serving{background:#ede9fe;color:#5b21b6}
+.st-Completed{background:#dcfce7;color:#166534}.st-NoShow{background:#fee2e2;color:#991b1b}.st-Cancelled{background:#e2e8f0;color:#334155}
+.pr{font-size:.72rem;font-weight:700;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:1px 6px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.filters label{min-width:150px}
+/* ticket result */
+.tk-result{border:2px dashed #94a3b8;border-radius:12px;padding:18px;text-align:center;background:#f8fafc}
+.tk-result .n{font-size:3rem;font-weight:900;font-family:ui-monospace,Consolas,monospace;letter-spacing:2px;color:var(--accent)}
+/* operator */
+.op{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:18px;margin-bottom:18px}
+@media(max-width:980px){.op{grid-template-columns:1fr}}
+.cur{border-radius:12px;padding:18px;text-align:center;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff}
+.cur .n{font-size:3.2rem;font-weight:900;font-family:ui-monospace,Consolas,monospace;letter-spacing:2px}
+.cur .s{color:#cbd5e1;font-size:.9rem}
+.opbtns{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.opbtns .btn{padding:14px 10px;font-size:.95rem;white-space:normal}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:6px}
+.dot.on{background:#22c55e}
+.nextup{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.nextup span{font-family:ui-monospace,Consolas,monospace;font-weight:700;background:#f1f5f9;border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+/* settings */
+.set-sec{margin-bottom:18px}
+.list-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.list-row input[type=text]{flex:1;min-width:160px}
+.cs{display:flex;gap:10px;flex-wrap:wrap;font-size:.82rem;padding:6px 0 4px 4px}
+.cs label{flex-direction:row;align-items:center;gap:5px;font-weight:500}
+.savebar{position:sticky;bottom:0;background:rgba(243,245,250,.95);padding:12px 0;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--line);margin-top:10px}
+.help{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:8px;padding:10px 12px;font-size:.84rem;margin:8px 0}
+/* modal & toast */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:#fff;border-radius:14px;max-width:620px;width:100%;max-height:90vh;overflow:auto;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:200}
+.toast{background:#0f172a;color:#fff;padding:11px 16px;border-radius:10px;font-size:.9rem;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:380px}
+.toast.err{background:var(--bad)}.toast.ok{background:var(--ok)}
+/* login */
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#0f172a,#1e3a8a)}
+.login .card{width:100%;max-width:400px;padding:28px}
+.login h1{font-size:1.35rem}
+/* chart */
+.chart{width:100%;height:220px}
+/* ===== PUBLIC DISPLAY ===== */
+body.display{background:#0b1220;color:#fff;overflow:hidden}
+.dsp{height:100vh;display:grid;grid-template-rows:auto 1fr auto;gap:1.4vh;padding:1.6vh 1.8vw}
+.dsp.light{background:#f8fafc;color:#0f172a}
+.dsp-h{display:flex;justify-content:space-between;align-items:center}
+.dsp-biz{font-size:clamp(20px,2.6vw,48px);font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.dsp-clock{text-align:right;font-variant-numeric:tabular-nums}
+.dsp-clock .t{font-size:clamp(22px,3vw,54px);font-weight:800;display:block}
+.dsp-clock .d{font-size:clamp(13px,1.3vw,24px);opacity:.75}
+.dsp-main{display:grid;grid-template-columns:1.45fr 1fr;gap:1.6vw;min-height:0}
+.dsp-left{display:flex;flex-direction:column;gap:1.4vh;min-height:0}
+.dsp-left .dsp-now{flex:1}
+.dsp-panel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:2vh 1.6vw;min-height:0;overflow:hidden}
+.dsp.light .dsp-panel{background:#fff;border-color:#e2e8f0}
+.dsp-lbl{font-size:clamp(14px,1.6vw,30px);font-weight:800;letter-spacing:3px;opacity:.75;text-transform:uppercase}
+.dsp-now{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.dsp-num{white-space:nowrap;font-size:clamp(48px,9vw,230px);font-weight:900;font-family:ui-monospace,Consolas,"Courier New",monospace;letter-spacing:.04em;line-height:1.05;color:var(--accent);text-shadow:0 0 40px color-mix(in srgb,var(--accent) 45%,transparent)}
+.dsp-proceed{font-size:clamp(16px,2vw,38px);font-weight:800;letter-spacing:3px;opacity:.8;margin-top:1vh}
+.dsp-counter{font-size:clamp(34px,5.2vw,110px);font-weight:900;color:#facc15;line-height:1.1}
+.dsp.light .dsp-counter{color:#b45309}
+.dsp-svc{font-size:clamp(14px,1.5vw,28px);opacity:.7;margin-top:.6vh}
+.dsp-now.flash{animation:flash 1s ease-in-out 5}
+@keyframes flash{0%,100%{background:rgba(255,255,255,.06)}50%{background:color-mix(in srgb,var(--accent) 40%,transparent)}}
+.dsp-ctr{display:flex;justify-content:space-between;align-items:center;padding:1.1vh .6vw;border-bottom:1px solid rgba(255,255,255,.1);font-size:clamp(16px,1.9vw,38px);font-weight:700}
+.dsp.light .dsp-ctr{border-color:#e2e8f0}
+.dsp-ctr .cn{font-family:ui-monospace,Consolas,monospace;font-weight:900;color:var(--accent)}
+.dsp-ctr .cs2{font-size:.55em;opacity:.65;display:block;font-weight:600}
+.dsp-wait{display:flex;flex-direction:column}
+.dsp-whead,.dsp-wrow{display:grid;grid-template-columns:auto 1fr auto;gap:1vw;align-items:center}
+.dsp-whead{font-size:clamp(11px,1vw,18px);font-weight:700;letter-spacing:2px;opacity:.55;text-transform:uppercase;padding:1vh .8vw .6vh}
+.dsp-wlist{display:flex;flex-direction:column;gap:.8vh;min-height:0;overflow:hidden}
+.dsp-wrow{background:rgba(255,255,255,.08);border-radius:12px;padding:.9vh .8vw;font-size:clamp(16px,1.9vw,38px)}
+.dsp.light .dsp-wrow{background:#f1f5f9}
+.dsp-wrow .wn{font-family:ui-monospace,Consolas,monospace;font-weight:900;letter-spacing:.03em}
+.dsp-wrow .ws{font-size:.5em;opacity:.65;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsp-wrow .wt{font-weight:800;color:#facc15;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.dsp.light .dsp-wrow .wt{color:#b45309}
+.dsp-wrow .wt small{display:block;font-size:.42em;font-weight:600;opacity:.75;color:inherit}
+.dsp-ctrs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.8vh .8vw}
+.dsp-ctrs.hide{display:none}
+.dsp-cbox{border-radius:12px;padding:1vh .8vw;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:clamp(14px,1.4vw,28px);font-weight:700}
+.dsp.light .dsp-cbox{background:#fff;border-color:#e2e8f0}
+.dsp-cbox .cs3{display:block;font-size:.7em;font-weight:800;margin-top:.3vh}
+.dsp-cbox.free .cs3{color:#22c55e}
+.dsp-cbox.busy .cs3{color:var(--accent);font-family:ui-monospace,Consolas,monospace}
+.dsp-empty{opacity:.55;font-size:clamp(16px,1.8vw,32px);padding:1vh 0}
+.dsp-info{display:flex;gap:2vw;align-items:center;background:rgba(255,255,255,.06);border-radius:16px;padding:1.2vh 1.4vw;font-size:clamp(14px,1.6vw,30px);font-weight:700;overflow:hidden}
+.dsp.light .dsp-info{background:#e2e8f0}
+.dsp-info b{color:#facc15}.dsp.light .dsp-info b{color:#b45309}
+.ticker{flex:1;overflow:hidden;white-space:nowrap;opacity:.85;font-weight:500}
+.ticker span{display:inline-block;padding-left:100%;animation:tick 28s linear infinite}
+@keyframes tick{to{transform:translateX(-100%)}}
+.dsp-banner{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--accent);color:#fff;padding:4vh 4vw;border-radius:28px;font-size:clamp(26px,4vw,80px);font-weight:900;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6);z-index:50;max-width:90vw}
+.dsp-banner small{display:block;font-size:.45em;font-weight:700;opacity:.9;margin-top:1vh}
+.dsp-unlock{position:fixed;inset:0;background:rgba(2,6,23,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:60;text-align:center;padding:20px}
+.dsp-unlock button{font-size:1.4rem;padding:18px 36px;border-radius:14px;border:0;background:var(--accent);color:#fff;font-weight:800;cursor:pointer}
+.dsp-tools{position:fixed;right:10px;bottom:10px;opacity:0;transition:opacity .3s;z-index:40}
+.dsp-tools:hover{opacity:1}
+.dsp-tools button{background:#1e293b;color:#fff;border:1px solid #334155;border-radius:8px;padding:6px 10px;cursor:pointer}
+@media(max-width:800px){.dsp-main{grid-template-columns:1fr}body.display{overflow:auto}.dsp{height:auto;min-height:100vh}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toasts" id="toasts"></div>
+<iframe id="printFrame" title="print" style="position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden"></iframe>
+<script>
+'use strict';
+/* =====================================================================
+   QUEUE MANAGEMENT SYSTEM — single-file application
+   Storage: IndexedDB (atomic transactions, unique [day, seq] index)
+   Real-time: BroadcastChannel + storage-event fallback + safety polling
+   ===================================================================== */
+const STATUSES=['Waiting','Called','Serving','Completed','No Show','Cancelled'];
+const ROLES={admin:'Administrator',frontdesk:'Front Desk',operator:'Queue Operator',display:'Public Display'};
+const PERMS={
+  admin:['register','reprint','viewQueue','operate','reports','settings','logs','viewPII'],
+  frontdesk:['register','reprint','viewQueue','viewPII'],
+  operator:['viewQueue','operate'],
+  display:[]
+};
+const browserTZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'}catch(e){return 'UTC'}})();
+const DEFAULTS={
+  businessName:'QUEUE MANAGEMENT SYSTEM',
+  timezone:browserTZ,
+  hours:{open:'08:00',close:'17:00',days:[1,2,3,4,5],outsideHours:'warn'},
+  numbering:{digits:4,padChar:'X',dailyReset:true},
+  printer:{paper:'80',autoPrint:true,copies:1,showService:false,line1:'Please wait until your number is called.',line2:'Thank you for your patience.'},
+  services:[
+    {id:'svc1',name:'General Inquiry',active:true},
+    {id:'svc2',name:'Applications',active:true},
+    {id:'svc3',name:'Payments',active:true},
+    {id:'svc4',name:'Customer Service',active:true}
+  ],
+  priorities:[
+    {id:'pri0',name:'Regular',rank:0},
+    {id:'pri1',name:'Priority (Senior / PWD / Pregnant)',rank:1}
+  ],
+  counters:[
+    {id:'ctr1',name:'Counter 1',services:[]},
+    {id:'ctr2',name:'Counter 2',services:[]}
+  ],
+  display:{theme:'dark',accent:'#3b82f6',maxWaiting:10,showService:true,showEstimate:true,showCounters:true,ticker:'Welcome! Please keep your ticket ready and watch this screen for your number.'},
+  announce:{enabled:true,target:'display',voice:'',volume:1,rate:0.9,repeat:1,chime:true,spell:true,template:'Queue number {number}, please proceed to {counter}.'},
+  estimate:{method:'service',defaultMinutes:5},
+  security:{autoLogoutMin:30,operatorSeesName:true}
+};
+
+/* ---------------- state ---------------- */
+const S={
+  settings:null,tickets:[],users:[],user:null,view:null,
+  counterId:sessionStorage.getItem('qms_counter')||'',
+  isDisplay:location.hash==='#display',
+  displayBeat:0,displayAudio:false,
+  lastResult:null,lastActivity:Date.now(),currentDay:null,report:null
+};
+let db,D=null; // D = settings draft
+const app=document.getElementById('app');
+
+/* ---------------- utilities ---------------- */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=p=>(p||'')+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const tz=()=>(S.settings&&S.settings.timezone)||browserTZ;
+function parts(ms){
+  const o={};
+  try{
+    new Intl.DateTimeFormat('en-US',{timeZone:tz(),year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23',weekday:'short'}).formatToParts(ms).forEach(x=>o[x.type]=x.value);
+  }catch(e){const d=new Date(ms);o.year=d.getFullYear();o.month=String(d.getMonth()+1).padStart(2,'0');o.day=String(d.getDate()).padStart(2,'0');o.hour=String(d.getHours());o.minute=String(d.getMinutes());o.weekday=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]}
+  return o;
+}
+const dayKey=(ms=Date.now())=>{const p=parts(ms);return `${p.year}-${p.month}-${p.day}`};
+const fmtDate=ms=>{const p=parts(ms);return `${p.month}/${p.day}/${p.year}`};
+const fmtTime=ms=>{try{return new Intl.DateTimeFormat('en-US',{timeZone:tz(),hour:'numeric',minute:'2-digit',hour12:true}).format(ms)}catch(e){return new Date(ms).toLocaleTimeString()}};
+const fmtTimeS=ms=>{try{return new Intl.DateTimeFormat('en-US',{timeZone:tz(),hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(ms)}catch(e){return new Date(ms).toLocaleTimeString()}};
+const fmtLongDate=ms=>{try{return new Intl.DateTimeFormat('en-US',{timeZone:tz(),weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(ms)}catch(e){return new Date(ms).toDateString()}};
+const dayLabel=k=>{const [y,m,d]=k.split('-');return `${m}/${d}/${y}`};
+const minutesOfDay=ms=>{const p=parts(ms);return (+p.hour%24)*60+(+p.minute)};
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function fmtDur(ms){
+  if(ms==null||isNaN(ms))return '—';
+  const m=Math.max(0,Math.floor(ms/60000));
+  if(m<60)return m+' min';
+  return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min';
+}
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const max=a=>a.length?Math.max(...a):null;
+const mins=ms=>ms==null?'':Math.round(ms/6000)/10;
+function toast(msg,type){
+  const el=document.createElement('div');el.className='toast '+(type||'');el.textContent=msg;
+  $('#toasts').appendChild(el);setTimeout(()=>el.remove(),type==='err'?6000:3500);
+}
+function modal(html,onMount){
+  closeModal();
+  const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg';
+  bg.innerHTML=`<div class="modal">${html}</div>`;
+  bg.addEventListener('mousedown',e=>{if(e.target===bg)closeModal()});
+  document.body.appendChild(bg);
+  if(onMount)onMount(bg);
+  return bg;
+}
+function closeModal(){const m=$('#modalBg');if(m)m.remove()}
+const can=p=>!!S.user&&(PERMS[S.user.role]||[]).includes(p);
+const counterById=id=>S.settings.counters.find(c=>c.id===id);
+const serviceById=id=>S.settings.services.find(s=>s.id===id);
+const activeServices=()=>S.settings.services.filter(s=>s.active!==false);
+const stClass=s=>'st st-'+String(s).replace(/\s/g,'');
+
+/* ---------------- database ---------------- */
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('qms_database',1);
+    r.onupgradeneeded=()=>{
+      const d=r.result;
+      const t=d.createObjectStore('tickets',{keyPath:'id'});
+      t.createIndex('daySeq',['day','seq'],{unique:true});   // guarantees no duplicate numbers per day
+      t.createIndex('day','day');
+      t.createIndex('status','status');
+      d.createObjectStore('meta',{keyPath:'key'});           // settings + counter
+      const u=d.createObjectStore('users',{keyPath:'id'});
+      u.createIndex('username','username',{unique:true});
+      const l=d.createObjectStore('logs',{keyPath:'id',autoIncrement:true});
+      l.createIndex('day','day');
+    };
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error);
+    r.onblocked=()=>toast('Close other copies of the system to finish upgrading the database.','err');
+  });
+}
+function idb(store,mode,op){
+  return new Promise((res,rej)=>{
+    const t=db.transaction(store,mode);const s=t.objectStore(store);let v;
+    const r=op(s);if(r)r.onsuccess=()=>{v=r.result};
+    t.oncomplete=()=>res(v);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('aborted'));
+  });
+}
+const dbGet=(st,k)=>idb(st,'readonly',s=>s.get(k));
+const dbAll=st=>idb(st,'readonly',s=>s.getAll());
+const dbPut=(st,v)=>idb(st,'readwrite',s=>s.put(v));
+const dbIndex=(st,ix,range)=>idb(st,'readonly',s=>s.index(ix).getAll(range));
+async function addLog(action,number,detail){
+  const now=Date.now();
+  try{await idb('logs','readwrite',s=>s.add({at:now,day:dayKey(now),userId:S.user?S.user.id:'system',userName:S.user?S.user.name:'System',action,number:number||'',detail:detail||''}))}catch(e){}
+}
+
+/* ---------------- settings ---------------- */
+function deepMerge(a,b){
+  for(const k in b){
+    if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])&&a[k]&&typeof a[k]==='object'&&!Array.isArray(a[k]))deepMerge(a[k],b[k]);
+    else a[k]=b[k];
+  }
+  return a;
+}
+async function loadSettings(){
+  const r=await dbGet('meta','settings');
+  S.settings=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),r?r.value:{});
+  document.documentElement.style.setProperty('--accent',S.isDisplay?S.settings.display.accent:'#2563eb');
+}
+async function saveSettings(v){
+  await dbPut('meta',{key:'settings',value:v});
+  S.settings=deepMerge(JSON.parse(JSON.stringify(DEFAULTS)),v);
+  notify({type:'settings'});
+}
+
+/* ---------------- auth ---------------- */
+async function hashPin(pin,salt){
+  const data=new TextEncoder().encode(salt+':'+pin);
+  if(window.crypto&&crypto.subtle){
+    try{const h=await crypto.subtle.digest('SHA-256',data);return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch(e){}
+  }
+  let h=2166136261;for(const b of data){h^=b;h=Math.imul(h,16777619)}
+  return 'f'+(h>>>0).toString(16);
+}
+async function ensureAdmin(){
+  S.users=await dbAll('users');
+  if(!S.users.length){
+    const salt=uid();
+    const u={id:uid('u'),name:'Administrator',username:'admin',role:'admin',active:true,salt,pin:await hashPin('1234',salt),mustChange:true,created:Date.now()};
+    await dbPut('users',u);S.users=[u];
+  }
+}
+function restoreSession(){
+  try{
+    const s=JSON.parse(sessionStorage.getItem('qms_session')||'null');
+    if(s){const u=S.users.find(x=>x.id===s.id&&x.active);if(u)S.user=u}
+  }catch(e){}
+}
+function logout(reason){
+  if(S.user)addLog('Signed out',null,reason||'');
+  S.user=null;sessionStorage.removeItem('qms_session');S.view=null;render();
+  if(reason)toast(reason);
+}
+
+/* ---------------- real-time sync ---------------- */
+const bc=('BroadcastChannel' in window)?new BroadcastChannel('qms_sync'):null;
+function notify(msg){
+  if(bc)bc.postMessage(msg);
+  else try{localStorage.setItem('qms_ping',JSON.stringify(Object.assign({},msg,{_t:Date.now(),_r:Math.random()})))}catch(e){}
+}
+if(bc)bc.onmessage=e=>onSync(e.data);
+window.addEventListener('storage',e=>{if(!bc&&e.key==='qms_ping'&&e.newValue){try{onSync(JSON.parse(e.newValue))}catch(x){}}});
+let syncTimer=null;
+async function onSync(m){
+  if(!m)return;
+  if(m.type==='display-alive'){S.displayBeat=Date.now();S.displayAudio=!!m.audio;const d=$('#dispStatus');if(d)renderDispStatus();return}
+  if(m.type==='announce'){
+    const a=S.settings.announce;
+    if(S.isDisplay&&(a.target==='display'||a.target==='both')){speak(m.text);showBanner(m.number,m.counter)}
+    return;
+  }
+  if(m.type==="settings"){await loadSettings();if(S.isDisplay)renderDisplay(true);else if(S.view!=='settings')renderView();return}
+  if(m.type==='users'){S.users=await dbAll('users');if(S.user){const u=S.users.find(x=>x.id===S.user.id);if(!u||!u.active)return logout('Your account was changed by an administrator.');S.user=u}return}
+  if(m.type==='changed'){
+    clearTimeout(syncTimer);
+    syncTimer=setTimeout(async()=>{await loadTickets();refreshView()},40);
+  }
+}
+async function loadTickets(){S.tickets=await dbIndex('tickets','day',IDBKeyRange.only(dayKey()))}
+
+/* ---------------- queue numbering ---------------- */
+function prefixFrom(last){
+  const pad=((S.settings.numbering.padChar||'X')+'').toUpperCase().replace(/[^A-Z]/g,'').charAt(0)||'X';
+  const letters=String(last||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z]/g,'').toUpperCase();
+  return letters.slice(0,3).padEnd(3,pad);
+}
+const formatNumber=(prefix,seq)=>prefix+'-'+String(seq).padStart(Math.max(4,+S.settings.numbering.digits||4),'0');
+
+/* Atomic ticket creation: one readwrite transaction over meta+tickets.
+   IndexedDB serialises overlapping readwrite transactions across all tabs/windows,
+   and the unique [day,seq] index rejects any duplicate as a last line of defence. */
+function createTicket(data){
+  const day=dayKey(),now=Date.now(),reset=!!S.settings.numbering.dailyReset;
+  return new Promise((res,rej)=>{
+    const t=db.transaction(['meta','tickets','logs'],'readwrite');
+    const meta=t.objectStore('meta'),tk=t.objectStore('tickets');let ticket=null;
+    meta.get('counter').onsuccess=e=>{
+      const c=e.target.result||{key:'counter',day,seq:0};
+      if(reset&&c.day!==day)c.seq=0;         // new business day → restart at 0001
+      c.day=day;
+      const next=()=>{
+        c.seq++;
+        tk.index('daySeq').getKey([day,c.seq]).onsuccess=ev=>{
+          if(ev.target.result!==undefined)return next(); // already used → skip
+          const prefix=prefixFrom(data.last);
+          const pri=S.settings.priorities.find(p=>p.id===data.priority)||S.settings.priorities[0];
+          const svc=serviceById(data.service);
+          ticket={
+            id:uid('t'),day,seq:c.seq,prefix,number:formatNumber(prefix,c.seq),
+            client:{first:data.first,middle:data.middle,last:data.last,phone:data.phone},
+            serviceId:svc.id,serviceName:svc.name,
+            priorityId:pri.id,priorityName:pri.name,priorityRank:+pri.rank||0,
+            status:'Waiting',registeredAt:now,
+            registeredBy:S.user.id,registeredByName:S.user.name,
+            calledAt:null,lastCalledAt:null,waitMs:null,servingAt:null,completedAt:null,serviceMs:null,
+            counterId:null,counterName:null,callCount:0,printCount:0,
+            history:[{at:now,action:'Registered',by:S.user.name}]
+          };
+          tk.add(ticket);meta.put(c);
+          t.objectStore('logs').add({at:now,day,userId:S.user.id,userName:S.user.name,action:'Registered / Ticket generated',number:ticket.number,detail:svc.name});
+        };
+      };
+      next();
+    };
+    t.oncomplete=()=>res(ticket);
+    t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('Ticket could not be created'));
+  });
+}
+
+/* Generic atomic ticket operation against today's tickets */
+function ticketTx(mutator){
+  return new Promise((res,rej)=>{
+    const t=db.transaction(['tickets','logs'],'readwrite');const st=t.objectStore('tickets');let out=null;
+    st.index('day').getAll(IDBKeyRange.only(dayKey())).onsuccess=e=>{
+      const r=mutator(e.target.result);
+      if(!r||r.error){out=r||{error:'Nothing to do.'};return}
+      const now=Date.now();
+      r.ticket.history=r.ticket.history||[];
+      r.ticket.history.push({at:now,action:r.action,by:S.user.name,detail:r.detail||''});
+      r.ticket.updatedAt=now;
+      st.put(r.ticket);
+      t.objectStore('logs').add({at:now,day:dayKey(now),userId:S.user.id,userName:S.user.name,action:r.action,number:r.ticket.number,detail:r.detail||''});
+      out=r;
+    };
+    t.oncomplete=()=>out&&out.error?rej(new Error(out.error)):res(out);
+    t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('Operation failed'));
+  });
+}
+
+/* End-of-day: close tickets left open from a previous business day */
+async function closeStale(){
+  const today=dayKey();let open=[];
+  for(const st of ['Waiting','Called','Serving'])open=open.concat(await dbIndex('tickets','status',IDBKeyRange.only(st)));
+  const stale=open.filter(t=>t.day<today);
+  if(!stale.length)return;
+  await new Promise((res,rej)=>{
+    const t=db.transaction(['tickets','logs'],'readwrite');const st=t.objectStore('tickets'),lg=t.objectStore('logs');const now=Date.now();
+    stale.forEach(tk=>{
+      const from=tk.status;
+      if(from==='Waiting'){tk.status='Cancelled';tk.cancelReason='Auto-closed at end of business day'}
+      else if(from==='Called'){tk.status='No Show'}
+      else{tk.status='Completed';tk.completedAt=tk.servingAt;tk.serviceMs=null}
+      tk.autoClosed=true;
+      tk.history.push({at:now,action:'Auto-closed ('+from+' → '+tk.status+')',by:'System'});
+      st.put(tk);
+      lg.add({at:now,day:dayKey(now),userId:'system',userName:'System',action:'Auto-closed at end of day',number:tk.number,detail:from+' → '+tk.status});
+    });
+    t.oncomplete=res;t.onerror=()=>rej(t.error);
+  });
+  notify({type:'changed'});
+}
+
+/* ---------------- queue logic ---------------- */
+const rankOf=t=>{const p=S.settings.priorities.find(p=>p.id===t.priorityId);return p?(+p.rank||0):(t.priorityRank||0)};
+const queueSort=(a,b)=>rankOf(b)-rankOf(a)||a.registeredAt-b.registeredAt||a.seq-b.seq;
+function activeFor(list,cid){
+  return list.filter(t=>t.counterId===cid&&(t.status==='Called'||t.status==='Serving')).sort((a,b)=>b.lastCalledAt-a.lastCalledAt)[0]||null;
+}
+function eligible(list,cid){
+  const c=counterById(cid);
+  return list.filter(t=>t.status==='Waiting'&&(!c||!c.services||!c.services.length||c.services.includes(t.serviceId))).sort(queueSort);
+}
+function waitingOf(t,now=Date.now()){return t.status==='Waiting'?now-t.registeredAt:t.waitMs}
+function computeStats(list,now=Date.now()){
+  const by=s=>list.filter(t=>t.status===s).length;
+  const waiting=list.filter(t=>t.status==='Waiting');
+  const frozen=list.filter(t=>t.waitMs!=null).map(t=>t.waitMs);
+  const live=waiting.map(t=>now-t.registeredAt);
+  const svc=list.filter(t=>t.serviceMs!=null).map(t=>t.serviceMs);
+  return{total:list.length,waiting:waiting.length,called:by('Called'),serving:by('Serving'),completed:by('Completed'),noShow:by('No Show'),cancelled:by('Cancelled'),
+    avgWait:avg(frozen),longestCurrent:max(live),longestToday:max(frozen.concat(live)),avgService:avg(svc)};
+}
+function estimateMs(){
+  const e=S.settings.estimate,st=computeStats(S.tickets);
+  const counters=Math.max(1,S.settings.counters.length);
+  const def=(+e.defaultMinutes||5)*60000;
+  if(e.method==='avgWait')return st.avgWait!=null?st.avgWait:st.waiting*def/counters;
+  const per=e.method==='fixed'?def:(st.avgService!=null?st.avgService:def);
+  return Math.round(st.waiting*per/counters);
+}
+function isOpenNow(){
+  const h=S.settings.hours,now=Date.now(),p=parts(now);
+  const wd=WD.indexOf(p.weekday);
+  if(!(h.days||[]).map(Number).includes(wd))return false;
+  const m=minutesOfDay(now);
+  const [oh,om]=(h.open||'00:00').split(':').map(Number),[ch,cm]=(h.close||'23:59').split(':').map(Number);
+  return m>=oh*60+om&&m<ch*60+cm;
+}
+
+/* ---------------- announcements ---------------- */
+function spokenNumber(num){
+  if(!S.settings.announce.spell)return num;
+  const [p,n]=num.split('-');
+  return p.split('').join(' ')+', '+(n||'').split('').join(' ');
+}
+function announceText(t){
+  return (S.settings.announce.template||'Queue number {number}, please proceed to {counter}.')
+    .replace(/\{number\}/g,spokenNumber(t.number)).replace(/\{counter\}/g,t.counterName||'the counter').replace(/\{service\}/g,t.serviceName||'');
+}
+function chime(vol){
+  return new Promise(res=>{
+    try{
+      const C=window.AudioContext||window.webkitAudioContext;if(!C)return res();
+      S.ac=S.ac||new C();const ac=S.ac;ac.resume&&ac.resume();const t0=ac.currentTime+0.05;
+      [[880,0],[660,0.38]].forEach(([f,d])=>{
+        const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;
+        g.gain.setValueAtTime(0.0001,t0+d);g.gain.exponentialRampToValueAtTime(0.45*vol+0.0001,t0+d+0.03);g.gain.exponentialRampToValueAtTime(0.0001,t0+d+0.7);
+        o.connect(g);g.connect(ac.destination);o.start(t0+d);o.stop(t0+d+0.75);
+      });
+      setTimeout(res,1150);
+    }catch(e){res()}
+  });
+}
+function speak(text){
+  const a=S.settings.announce;if(!a.enabled)return;
+  const vol=Math.max(0,Math.min(1,+a.volume));
+  const go=()=>{
+    if(!('speechSynthesis' in window))return;
+    const v=speechSynthesis.getVoices().find(v=>v.name===a.voice);
+    for(let i=0;i<Math.max(1,+a.repeat||1);i++){
+      const u=new SpeechSynthesisUtterance(text);u.volume=vol;u.rate=+a.rate||0.9;
+      if(v){u.voice=v;u.lang=v.lang}else u.lang='en-US';
+      speechSynthesis.speak(u);
+    }
+  };
+  if(a.chime)chime(vol).then(go);else go();
+}
+function displayAlive(){return Date.now()-S.displayBeat<12000}
+function announce(t){
+  const a=S.settings.announce,text=announceText(t);
+  notify({type:'announce',text,number:t.number,counter:t.counterName});
+  if(!a.enabled)return;
+  const localSpeak=a.target==='operator'||a.target==='both'||(a.target==='display'&&!(displayAlive()&&S.displayAudio));
+  if(localSpeak)speak(text);
+}
+
+/* ---------------- ticket printing ---------------- */
+function ticketHTML(t){
+  const p=S.settings.printer,w58=p.paper==='58';
+  const one=`<div class="tk">
+    <div class="biz">${esc(S.settings.businessName||'QUEUE MANAGEMENT SYSTEM')}</div>
+    <div class="rule"></div>
+    <div class="lbl">YOUR QUEUE NUMBER</div>
+    <div class="num">${esc(t.number)}</div>
+    ${p.showService?`<div class="svc">${esc(t.serviceName)}</div>`:''}
+    <div class="dt">Date: ${fmtDate(t.registeredAt)}</div>
+    <div class="dt">Time: ${fmtTime(t.registeredAt)}</div>
+    <div class="rule"></div>
+    ${p.line1?`<div class="msg">${esc(p.line1)}</div>`:''}
+    ${p.line2?`<div class="msg">${esc(p.line2)}</div>`:''}
+  </div>`;
+  const copies=Math.max(1,Math.min(3,+p.copies||1));
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(t.number)}</title><style>
+  @page{size:${w58?'58mm':'80mm'} auto;margin:0}
+  html,body{margin:0;padding:0;background:#fff;color:#000}
+  body{width:${w58?'58mm':'80mm'};font-family:Arial,Helvetica,sans-serif}
+  .tk{padding:${w58?'3mm 2mm 6mm':'4mm 4mm 8mm'};text-align:center;page-break-after:always;break-after:page}
+  .tk:last-child{page-break-after:auto;break-after:auto}
+  .biz{font-weight:800;font-size:${w58?'11px':'14px'};letter-spacing:.5px;text-transform:uppercase}
+  .rule{border-top:1px dashed #000;margin:${w58?'4px':'6px'} 0}
+  .lbl{font-size:${w58?'10px':'12px'};font-weight:700;letter-spacing:1px;margin-top:4px}
+  .num{font-size:${w58?'30px':'42px'};font-weight:900;letter-spacing:1px;margin:${w58?'4px 0':'6px 0'};font-family:Arial Black,Arial,sans-serif;border:2px solid #000;border-radius:6px;padding:${w58?'4px 0':'6px 0'}}
+  .svc{font-size:${w58?'10px':'12px'};font-weight:700;margin-bottom:4px}
+  .dt{font-size:${w58?'11px':'13px'};margin:2px 0}
+  .msg{font-size:${w58?'10px':'12px'};margin:3px 0}
+  </style></head><body>${Array(copies).fill(one).join('')}</body></html>`;
+}
+function printHTML(html){
+  const f=$('#printFrame');
+  f.onload=()=>{setTimeout(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast('Printing was blocked by the browser.','err')}},120)};
+  f.srcdoc=html;
+}
+async function printTicket(t,reprint){
+  printHTML(ticketHTML(t));
+  try{
+    await ticketTxById(t.id,tk=>{tk.printCount=(tk.printCount||0)+1;return{ticket:tk,action:reprint?'Ticket reprinted':'Ticket printed',detail:'Copy #'+tk.printCount}},true);
+  }catch(e){}
+}
+function ticketTxById(id,fn,anyDay){
+  return new Promise((res,rej)=>{
+    const t=db.transaction(['tickets','logs'],'readwrite');const st=t.objectStore('tickets');let out=null;
+    st.get(id).onsuccess=e=>{
+      const tk=e.target.result;if(!tk||(!anyDay&&tk.day!==dayKey())){out={error:'Ticket not found for today.'};return}
+      const r=fn(tk);if(!r||r.error){out=r||{error:'Nothing to do.'};return}
+      const now=Date.now();
+      tk.history.push({at:now,action:r.action,by:S.user.name,detail:r.detail||''});tk.updatedAt=now;st.put(tk);
+      t.objectStore('logs').add({at:now,day:dayKey(now),userId:S.user.id,userName:S.user.name,action:r.action,number:tk.number,detail:r.detail||''});
+      out=r;
+    };
+    t.oncomplete=()=>out&&out.error?rej(new Error(out.error)):res(out);
+    t.onerror=()=>rej(t.error);
+  });
+}
+
+/* =====================================================================
+   LOGIN
+   ===================================================================== */
+let loginFails=0,lockUntil=0;
+function renderLogin(){
+  document.body.className='';
+  const users=S.users.filter(u=>u.active);
+  const first=S.users.length===1&&S.users[0].mustChange;
+  app.innerHTML=`<div class="login"><div class="card">
+    <h1>${esc(S.settings.businessName)}</h1>
+    <p class="muted" style="margin-top:-6px">Queue Management System — staff sign-in</p>
+    <form id="loginForm">
+      <label style="margin-bottom:12px">User
+        <select name="user">${users.map(u=>`<option value="${u.id}">${esc(u.name)} — ${ROLES[u.role]}</option>`).join('')}</select>
+      </label>
+      <label style="margin-bottom:16px">PIN<input name="pin" type="password" inputmode="numeric" autocomplete="current-password" required autofocus></label>
+      <button class="btn primary big" type="submit">Sign In</button>
+    </form>
+    ${first?`<div class="help">First-time setup: sign in as <b>Administrator</b> with PIN <b>1234</b>. You will be asked to choose a new PIN.</div>`:''}
+    <p style="text-align:center;margin:16px 0 0"><a href="#display" id="openDsp" style="color:var(--accent);font-weight:600">Open Public Display (no sign-in, anonymous)</a></p>
+  </div></div>`;
+  $('#openDsp').onclick=e=>{e.preventDefault();openDisplayWindow()};
+  $('#loginForm').onsubmit=async e=>{
+    e.preventDefault();
+    if(Date.now()<lockUntil)return toast('Too many attempts. Try again in a minute.','err');
+    const f=e.target,u=S.users.find(x=>x.id===f.user.value);
+    if(!u)return;
+    if(await hashPin(f.pin.value,u.salt)!==u.pin){
+      loginFails++;if(loginFails>=5){lockUntil=Date.now()+60000;loginFails=0}
+      f.pin.value='';return toast('Incorrect PIN.','err');
+    }
+    loginFails=0;S.user=u;S.lastActivity=Date.now();
+    sessionStorage.setItem('qms_session',JSON.stringify({id:u.id}));
+    await addLog('Signed in');
+    if(u.mustChange)return changePinModal(true);
+    render();
+  };
+}
+function changePinModal(forced){
+  modal(`<h2>${forced?'Choose a new PIN':'Change my PIN'}</h2>
+    <p class="muted">${forced?'The default PIN must be changed before you continue.':''} Use 4–12 digits.</p>
+    <form id="pinForm"><div class="row2">
+      <label>New PIN<input name="a" type="password" inputmode="numeric" pattern="\\d{4,12}" required></label>
+      <label>Confirm PIN<input name="b" type="password" inputmode="numeric" pattern="\\d{4,12}" required></label></div>
+      <div class="btns" style="justify-content:flex-end">${forced?'':'<button type="button" class="btn" id="pinCancel">Cancel</button>'}<button class="btn primary">Save PIN</button></div>
+    </form>`,bg=>{
+      if(!forced)$('#pinCancel',bg).onclick=closeModal;
+      $('#pinForm',bg).onsubmit=async e=>{
+        e.preventDefault();const f=e.target;
+        if(f.a.value!==f.b.value)return toast('PINs do not match.','err');
+        if(f.a.value==='1234')return toast('Please choose a PIN other than 1234.','err');
+        const u=S.user;u.salt=uid();u.pin=await hashPin(f.a.value,u.salt);u.mustChange=false;
+        await dbPut('users',u);notify({type:'users'});await addLog('Changed own PIN');
+        closeModal();toast('PIN updated.','ok');render();
+      };
+    });
+}
+
+/* =====================================================================
+   APP SHELL
+   ===================================================================== */
+const VIEWS={
+  register:{label:'Front Desk',perm:'register',render:vRegister,refresh:refreshRegister},
+  queue:{label:'Queue Management',perm:'viewQueue',render:vQueue,refresh:refreshQueue},
+  reports:{label:'Reports',perm:'reports',render:vReports},
+  logs:{label:'Activity Log',perm:'logs',render:vLogs},
+  settings:{label:'Settings',perm:'settings',render:vSettings}
+};
+const allowedViews=()=>Object.keys(VIEWS).filter(k=>can(VIEWS[k].perm));
+function render(){
+  if(S.isDisplay)return startDisplay();
+  if(!S.user)return renderLogin();
+  if(S.user.role==='display'){S.isDisplay=true;history.replaceState(null,'','#display');return startDisplay()}
+  document.body.className='';
+  const views=allowedViews();
+  if(!views.includes(S.view))S.view=views[0];
+  app.innerHTML=`<header class="top">
+      <div class="brand">${esc(S.settings.businessName)}${/^queue management system$/i.test(S.settings.businessName.trim())?'':'<small>QUEUE MANAGEMENT SYSTEM</small>'}</div>
+      <nav class="nav">${views.map(v=>`<button data-v="${v}" class="${v===S.view?'on':''}">${VIEWS[v].label}</button>`).join('')}
+        <button id="openDisplay">Public Display ↗</button></nav>
+      <div class="sp"></div>
+      <span class="pill" id="openPill"></span>
+      <div class="clock"><div id="hdrTime"></div><div id="hdrDate" style="font-size:.75rem"></div></div>
+      <div class="who">Signed in: <b>${esc(S.user.name)}</b> · ${ROLES[S.user.role]}<br>
+        <a href="#" id="myPin" style="color:#93c5fd">Change PIN</a> · <a href="#" id="logout" style="color:#93c5fd">Sign out</a></div>
+    </header><main id="main"></main>`;
+  $$('.nav [data-v]').forEach(b=>b.onclick=()=>{S.view=b.dataset.v;render()});
+  $('#openDisplay').onclick=openDisplayWindow;
+  $('#logout').onclick=e=>{e.preventDefault();logout()};
+  $('#myPin').onclick=e=>{e.preventDefault();changePinModal(false)};
+  tickHeader();renderView();
+}
+function renderView(){if(S.user&&!S.isDisplay&&VIEWS[S.view])VIEWS[S.view].render()}
+function refreshView(){
+  if(S.isDisplay)return renderDisplay();
+  if(S.user&&VIEWS[S.view]&&VIEWS[S.view].refresh)VIEWS[S.view].refresh();
+}
+function tickHeader(){
+  const now=Date.now();
+  const t=$('#hdrTime'),d=$('#hdrDate'),p=$('#openPill');
+  if(t)t.textContent=fmtTimeS(now);
+  if(d)d.textContent=fmtDate(now);
+  if(p){const o=isOpenNow();p.className='pill '+(o?'open':'closed');p.textContent=o?'OPEN':'CLOSED'}
+}
+function openDisplayWindow(){
+  const url=location.href.split('#')[0]+'#display';
+  const w=window.open(url,'qms_public_display','width=1280,height=720');
+  if(!w)toast('Pop-up blocked. Allow pop-ups, or open this file with #display at the end of the address.','err');
+}
+
+/* =====================================================================
+   FRONT DESK REGISTRATION
+   ===================================================================== */
+function vRegister(){
+  const s=S.settings;
+  $('#main').innerHTML=`<div class="grid2">
+    <section class="card">
+      <h2>Client Registration</h2>
+      <p class="muted" style="margin-top:-6px">Personal information is for authorized staff only and never appears on the ticket or the public display.</p>
+      <form id="regForm" autocomplete="off">
+        <div class="row3">
+          <label>First Name *<input name="first" required maxlength="60"></label>
+          <label>Middle Name<input name="middle" maxlength="60" placeholder="Optional"></label>
+          <label>Last Name *<input name="last" required maxlength="60"></label>
+        </div>
+        <div class="row3">
+          <label>Phone Number<input name="phone" type="tel" maxlength="25" placeholder="Optional"></label>
+          <label>Service Requested *<select name="service" required><option value="">Select a service…</option>
+            ${activeServices().map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label>
+          <label>Queue Priority<select name="priority">${s.priorities.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
+        </div>
+        <div class="row3">
+          <label>Registration Date<input id="regDate" readonly></label>
+          <label>Registration Time<input id="regTime" readonly></label>
+          <label>Ticket Prefix<input id="regPfx" readonly value="---"></label>
+        </div>
+        <p class="muted">Date and time are recorded automatically at the moment the ticket is generated. The four-digit number is assigned from one sequence shared by everyone today.</p>
+        <button class="btn primary big" type="submit" id="genBtn">Generate Queue Ticket</button>
+      </form>
+    </section>
+    <section class="stack">
+      <div class="card"><h2>Last Ticket Issued</h2><div id="lastTicket"></div></div>
+      <div class="card"><h2>Today's Registrations</h2><div id="regList"></div></div>
+    </section>
+  </div>`;
+  const f=$('#regForm');
+  f.last.addEventListener('input',()=>{$('#regPfx').value=f.last.value.trim()?prefixFrom(f.last.value):'---'});
+  f.phone.addEventListener('input',()=>{f.phone.value=f.phone.value.replace(/[^\d+()\-\s.]/g,'')});
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    const d={first:f.first.value.trim(),middle:f.middle.value.trim(),last:f.last.value.trim(),phone:f.phone.value.trim(),service:f.service.value,priority:f.priority.value};
+    if(!d.first||!d.last)return toast('First and last name are required.','err');
+    if(!d.service||!serviceById(d.service))return toast('Select the service requested.','err');
+    if(S.settings.hours.outsideHours!=='off'&&!isOpenNow()){
+      if(S.settings.hours.outsideHours==='block')return toast('Registration is closed outside operating hours.','err');
+      if(!confirm('The business is currently outside operating hours. Register this client anyway?'))return;
+    }
+    const btn=$('#genBtn');btn.disabled=true;btn.textContent='Generating…';
+    try{
+      const t=await createTicket(d);
+      S.lastResult=t;await loadTickets();notify({type:'changed'});
+      f.reset();$('#regPfx').value='---';
+      toast('Ticket '+t.number+' generated.','ok');
+      if(S.settings.printer.autoPrint)printTicket(t,false);
+      refreshRegister();f.first.focus();
+    }catch(err){toast('Could not generate ticket: '+err.message,'err')}
+    finally{btn.disabled=false;btn.textContent='Generate Queue Ticket'}
+  };
+  refreshRegister();tickRegister();
+}
+function tickRegister(){const now=Date.now();const a=$('#regDate'),b=$('#regTime');if(a)a.value=fmtDate(now);if(b)b.value=fmtTimeS(now)}
+function refreshRegister(){
+  const lt=$('#lastTicket');if(!lt)return;
+  const t=S.lastResult&&S.tickets.find(x=>x.id===S.lastResult.id)||S.lastResult;
+  lt.innerHTML=t?`<div class="tk-result">
+      <div class="muted">YOUR QUEUE NUMBER</div><div class="n">${esc(t.number)}</div>
+      <div>${esc(t.serviceName)} · ${fmtDate(t.registeredAt)} ${fmtTime(t.registeredAt)}</div>
+      <div class="btns" style="justify-content:center;margin-top:12px"><button class="btn primary" data-reprint="${t.id}">Print Again</button></div>
+    </div>`:`<p class="muted">No ticket issued in this session yet.</p>`;
+  const list=[...S.tickets].sort((a,b)=>b.seq-a.seq);
+  $('#regList').innerHTML=list.length?`<div class="tbl-wrap" style="max-height:420px"><table><thead><tr><th>Queue #</th><th>Client</th><th>Service</th><th>Time</th><th>Status</th><th></th></tr></thead><tbody>
+    ${list.map(t=>`<tr><td class="num">${esc(t.number)}</td><td>${esc(t.client.first+' '+t.client.last)}</td><td>${esc(t.serviceName)}</td><td>${fmtTime(t.registeredAt)}</td><td><span class="${stClass(t.status)}">${t.status}</span></td>
+      <td><button class="btn sm" data-reprint="${t.id}">Print Again</button></td></tr>`).join('')}
+    </tbody></table></div>`:'<p class="muted">No registrations yet today.</p>';
+  $$('[data-reprint]').forEach(b=>b.onclick=()=>{const t=S.tickets.find(x=>x.id===b.dataset.reprint)||S.lastResult;if(t)printTicket(t,true)});
+}
+
+/* =====================================================================
+   QUEUE MANAGEMENT DASHBOARD
+   ===================================================================== */
+let qFilter={status:'active',service:'',q:''};
+function vQueue(){
+  const op=can('operate');
+  $('#main').innerHTML=`
+    <div class="stats" id="qStats"></div>
+    ${op?`<div class="op">
+      <div class="card">
+        <label style="margin-bottom:10px">My Counter / Station
+          <select id="ctrSel"></select></label>
+        <div class="muted" id="ctrNote" style="margin:-4px 0 10px"></div>
+        <div id="curBox"></div>
+        <div class="muted" style="margin-top:10px" id="dispStatus"></div>
+      </div>
+      <div class="card">
+        <h2>Queue Controls</h2>
+        <div class="opbtns">
+          <button class="btn primary" data-op="next">▶ Call Next</button>
+          <button class="btn" data-op="again">🔊 Call Again</button>
+          <button class="btn ok" data-op="serve">Start Serving</button>
+          <button class="btn ok" data-op="complete">✔ Complete Service</button>
+          <button class="btn warn" data-op="noshow">Mark No Show</button>
+          <button class="btn bad" data-op="cancel">Cancel Ticket</button>
+          <button class="btn" data-op="recall">↺ Recall Previous Number</button>
+        </div>
+        <h3>Next up for this counter</h3><div class="nextup" id="nextUp"></div>
+      </div>
+    </div>`:''}
+    <div class="card">
+      <div class="filters">
+        <label>Show<select id="fStatus"><option value="active">Active (Waiting / Called / Serving)</option><option value="">All of today</option>${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></label>
+        <label>Service<select id="fService"><option value="">All services</option>${S.settings.services.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label style="flex:1">Search<input id="fQ" placeholder="Queue number${can('viewPII')?' or client name':''}"></label>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr>
+        <th>Queue #</th>${can('viewPII')?'<th>Client</th>':''}<th>Service</th><th>Priority</th><th>Reg. Date</th><th>Reg. Time</th><th>Waiting Time</th><th>Status</th><th>Counter</th><th>Actions</th>
+      </tr></thead><tbody id="qBody"></tbody></table></div>
+    </div>`;
+  $('#fStatus').value=qFilter.status;$('#fService').value=qFilter.service;$('#fQ').value=qFilter.q;
+  $('#fStatus').onchange=e=>{qFilter.status=e.target.value;refreshQueue()};
+  $('#fService').onchange=e=>{qFilter.service=e.target.value;refreshQueue()};
+  $('#fQ').oninput=e=>{qFilter.q=e.target.value;refreshQueue()};
+  if(op){
+    $('#ctrSel').onchange=e=>{
+      const id=e.target.value;
+      if(id&&activeFor(S.tickets,id)&&id!==S.counterId){toast('That counter is now serving someone. Choose another.','err');return refreshQueue()}
+      S.counterId=id;sessionStorage.setItem('qms_counter',S.counterId);refreshQueue();
+    };
+    $$('[data-op]').forEach(b=>b.onclick=()=>doOp(b.dataset.op));
+  }
+  refreshQueue();
+}
+/* Only counters/stations that are NOT serving someone are offered.
+   The operator's own counter always stays in the list so they can finish their client. */
+function fillCounterSelect(){
+  const sel=$('#ctrSel');if(!sel)return;
+  const avail=S.settings.counters.filter(c=>c.id===S.counterId||!activeFor(S.tickets,c.id));
+  if(S.counterId&&!counterById(S.counterId)){S.counterId='';sessionStorage.removeItem('qms_counter')}
+  const html=`<option value="">${avail.length?'Select an available counter…':'All counters are busy'}</option>`+
+    avail.map(c=>`<option value="${c.id}" ${c.id===S.counterId?'selected':''}>${esc(c.name)}</option>`).join('');
+  if(sel.dataset.h!==html){sel.innerHTML=html;sel.dataset.h=html}
+  const busy=S.settings.counters.length-avail.length;
+  const note=$('#ctrNote');if(note)note.textContent=busy?`${busy} counter${busy>1?'s':''} currently serving — hidden from this list.`:'';
+}
+function renderDispStatus(){
+  const d=$('#dispStatus');if(!d)return;
+  const alive=displayAlive();
+  d.innerHTML=`<span class="dot ${alive?'on':''}"></span>Public display: ${alive?('connected'+(S.displayAudio?' · sound on':' · sound not enabled on display')):'not open on this computer'}`;
+}
+function refreshQueue(){
+  const body=$('#qBody');if(!body)return;
+  const now=Date.now(),st=computeStats(S.tickets,now);
+  $('#qStats').innerHTML=[
+    ['People Waiting',st.waiting],['Called',st.called],['Serving',st.serving],['Completed',st.completed],['No Show',st.noShow],['Cancelled',st.cancelled],
+    ['Average Wait',fmtDur(st.avgWait)],['Longest Waiting Now',fmtDur(st.longestCurrent)],['Longest Wait Today',fmtDur(st.longestToday)],['Avg Service Time',fmtDur(st.avgService)],['Est. Wait (new arrival)',fmtDur(estimateMs())],['Tickets Today',st.total]
+  ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  // operator panel
+  if(can('operate')&&$('#curBox')){
+    fillCounterSelect();
+    const cur=S.counterId?activeFor(S.tickets,S.counterId):null;
+    const showName=cur&&(can('viewPII')||S.settings.security.operatorSeesName);
+    $('#curBox').innerHTML=!S.counterId?`<div class="cur"><div class="s">Select your counter to begin calling.</div></div>`:
+      cur?`<div class="cur"><div class="s">${cur.status==='Serving'?'NOW SERVING':'CALLED — WAITING FOR CLIENT'}</div><div class="n">${esc(cur.number)}</div>
+        <div class="s">${esc(cur.serviceName)}${cur.priorityRank>0?' · '+esc(cur.priorityName):''}</div>
+        ${showName?`<div class="s" style="margin-top:6px">Verify client: <b style="color:#fff">${esc(cur.client.first+' '+(cur.client.middle?cur.client.middle.charAt(0)+'. ':'')+cur.client.last)}</b></div>`:''}
+        <div class="s" style="margin-top:6px">Waited ${fmtDur(cur.waitMs)} · Called ${cur.callCount}×${cur.servingAt?' · Serving '+fmtDur(now-cur.servingAt):''}</div></div>`:
+      `<div class="cur"><div class="s">No active ticket at ${esc((counterById(S.counterId)||{}).name||'')}</div><div class="n" style="opacity:.35">---</div><div class="s">Press Call Next</div></div>`;
+    const nx=S.counterId?eligible(S.tickets,S.counterId).slice(0,8):[];
+    $('#nextUp').innerHTML=nx.length?nx.map(t=>`<span title="${esc(t.serviceName)}">${esc(t.number)}${t.priorityRank>0?' ★':''}</span>`).join(''):'<span class="muted" style="background:none;border:0">No one waiting for this counter.</span>';
+    const has=!!cur;
+    const set=(op,on)=>{const b=$(`[data-op="${op}"]`);if(b)b.disabled=!on};
+    set('next',!!S.counterId&&!has);set('again',has);set('serve',has&&cur.status==='Called');set('complete',has);
+    set('noshow',has&&cur.status==='Called');set('cancel',has);set('recall',!!S.counterId);
+    renderDispStatus();
+  }
+  // table
+  let list=[...S.tickets];
+  if(qFilter.status==='active')list=list.filter(t=>['Waiting','Called','Serving'].includes(t.status));
+  else if(qFilter.status)list=list.filter(t=>t.status===qFilter.status);
+  if(qFilter.service)list=list.filter(t=>t.serviceId===qFilter.service);
+  const q=qFilter.q.trim().toLowerCase();
+  if(q)list=list.filter(t=>t.number.toLowerCase().includes(q)||(can('viewPII')&&(t.client.first+' '+t.client.middle+' '+t.client.last).toLowerCase().includes(q)));
+  const order={Serving:0,Called:1,Waiting:2};
+  list.sort((a,b)=>{
+    const oa=order[a.status]??3,ob=order[b.status]??3;if(oa!==ob)return oa-ob;
+    if(a.status==='Waiting')return queueSort(a,b);
+    return (b.lastCalledAt||b.registeredAt)-(a.lastCalledAt||a.registeredAt);
+  });
+  const op=can('operate'),pii=can('viewPII');
+  body.innerHTML=list.length?list.map(t=>{
+    const w=waitingOf(t,now);
+    const acts=[];
+    if(op&&t.status==='Waiting')acts.push(`<button class="btn sm primary" data-row="call" data-id="${t.id}">Call</button>`);
+    if(op&&t.status==='No Show')acts.push(`<button class="btn sm" data-row="recallrow" data-id="${t.id}">Recall</button>`);
+    if(op&&(t.status==='Waiting'||t.status==='Called'))acts.push(`<button class="btn sm" data-row="cancel" data-id="${t.id}">Cancel</button>`);
+    if(can('reprint'))acts.push(`<button class="btn sm" data-row="print" data-id="${t.id}">Print Again</button>`);
+    acts.push(`<button class="btn sm" data-row="details" data-id="${t.id}">Details</button>`);
+    return `<tr><td class="num">${esc(t.number)}</td>${pii?`<td>${esc(t.client.first+' '+t.client.last)}</td>`:''}<td>${esc(t.serviceName)}</td>
+      <td>${t.priorityRank>0?`<span class="pr">${esc(t.priorityName)}</span>`:esc(t.priorityName||'Regular')}</td>
+      <td>${fmtDate(t.registeredAt)}</td><td>${fmtTime(t.registeredAt)}</td>
+      <td>${fmtDur(w)}${t.status!=='Waiting'&&w!=null?' <span class="muted">(final)</span>':''}</td>
+      <td><span class="${stClass(t.status)}">${t.status}</span></td><td>${esc(t.counterName||'—')}</td>
+      <td><div class="btns">${acts.join('')}</div></td></tr>`;
+  }).join(''):`<tr><td colspan="10" class="muted" style="text-align:center;padding:24px">No tickets match.</td></tr>`;
+  $$('[data-row]').forEach(b=>b.onclick=()=>rowAction(b.dataset.row,b.dataset.id));
+}
+async function doOp(op){
+  const cid=S.counterId,cname=(counterById(cid)||{}).name;
+  if(!cid)return toast('Select your counter first.','err');
+  let announceIt=false;
+  try{
+    let r;
+    if(op==='next'){
+      r=await ticketTx(list=>{
+        const a=activeFor(list,cid);
+        if(a)return{error:`${a.number} is still active at ${cname}. Complete it, mark No Show, or cancel it first.`};
+        const t=eligible(list,cid)[0];if(!t)return{error:'No eligible clients are waiting for this counter.'};
+        markCalled(t,cid);return{ticket:t,action:'Called',detail:cname};
+      });announceIt=true;
+    }else if(op==='again'){
+      r=await ticketTx(list=>{const a=activeFor(list,cid);if(!a)return{error:'No active ticket to call again.'};
+        a.lastCalledAt=Date.now();a.callCount=(a.callCount||0)+1;return{ticket:a,action:'Called again',detail:cname+' (call #'+a.callCount+')'}});announceIt=true;
+    }else if(op==='serve'){
+      r=await ticketTx(list=>{const a=activeFor(list,cid);if(!a||a.status!=='Called')return{error:'Call a ticket before starting service.'};
+        a.status='Serving';a.servingAt=Date.now();a.servedBy=S.user.id;a.servedByName=S.user.name;return{ticket:a,action:'Service started',detail:cname}});
+    }else if(op==='complete'){
+      r=await ticketTx(list=>{const a=activeFor(list,cid);if(!a)return{error:'No active ticket to complete.'};
+        const now=Date.now();if(!a.servingAt){a.servingAt=a.lastCalledAt||now;a.servedBy=S.user.id;a.servedByName=S.user.name}
+        a.status='Completed';a.completedAt=now;a.serviceMs=now-a.servingAt;a.completedBy=S.user.id;a.completedByName=S.user.name;
+        return{ticket:a,action:'Service completed',detail:cname+' · '+fmtDur(a.serviceMs)}});
+    }else if(op==='noshow'){
+      r=await ticketTx(list=>{const a=activeFor(list,cid);if(!a||a.status!=='Called')return{error:'Only a called ticket can be marked No Show.'};
+        a.status='No Show';a.noShowAt=Date.now();return{ticket:a,action:'Marked No Show',detail:cname}});
+    }else if(op==='cancel'){
+      const a0=activeFor(S.tickets,cid);if(!a0)return toast('No active ticket to cancel.','err');
+      const reason=prompt(`Cancel ticket ${a0.number}? Enter a reason (optional):`,'');if(reason===null)return;
+      r=await ticketTx(list=>{const a=activeFor(list,cid);if(!a)return{error:'No active ticket to cancel.'};
+        a.status='Cancelled';a.cancelledAt=Date.now();a.cancelReason=reason;return{ticket:a,action:'Cancelled',detail:reason}});
+    }else if(op==='recall'){
+      r=await ticketTx(list=>{
+        const a=activeFor(list,cid);
+        const prev=list.filter(t=>t.counterId===cid&&t.lastCalledAt&&(!a||t.id!==a.id)&&t.status!=='Cancelled').sort((x,y)=>y.lastCalledAt-x.lastCalledAt)[0];
+        if(!prev)return{error:'There is no previous number at this counter to recall.'};
+        if(prev.status==='No Show'){
+          if(a)return{error:`Finish ${a.number} before recalling ${prev.number}.`};
+          markCalled(prev,cid);return{ticket:prev,action:'Recalled (from No Show)',detail:cname};
+        }
+        prev.lastCalledAt=Date.now();prev.callCount=(prev.callCount||0)+1;
+        return{ticket:prev,action:'Recalled previous number',detail:cname+' (announcement repeated)'};
+      });announceIt=true;
+    }
+    await loadTickets();notify({type:'changed'});refreshQueue();
+    if(r&&r.ticket){toast(r.ticket.number+': '+r.action,'ok');if(announceIt)announce(r.ticket)}
+  }catch(e){toast(e.message,'err')}
+}
+function markCalled(t,cid){
+  const now=Date.now(),c=counterById(cid);
+  t.status='Called';
+  if(t.calledAt==null){t.calledAt=now;t.waitMs=now-t.registeredAt} // waiting-time counter stops here; preserved in history
+  t.lastCalledAt=now;t.counterId=cid;t.counterName=c?c.name:cid;t.callCount=(t.callCount||0)+1;
+  t.calledBy=S.user.id;t.calledByName=S.user.name;
+}
+async function rowAction(kind,id){
+  const t=S.tickets.find(x=>x.id===id);if(!t)return;
+  if(kind==='print')return printTicket(t,true);
+  if(kind==='details')return detailsModal(t);
+  const cid=S.counterId,cname=(counterById(cid)||{}).name;
+  try{
+    let r,ann=false;
+    if(kind==='call'||kind==='recallrow'){
+      if(!cid)return toast('Select your counter first.','err');
+      r=await ticketTx(list=>{
+        const a=activeFor(list,cid);if(a)return{error:`${a.number} is still active at ${cname}. Finish it first.`};
+        const x=list.find(z=>z.id===id);if(!x||(x.status!=='Waiting'&&x.status!=='No Show'))return{error:'This ticket can no longer be called.'};
+        const c=counterById(cid);if(x.status==='Waiting'&&c&&c.services&&c.services.length&&!c.services.includes(x.serviceId)&&!confirm(`${cname} is not set up for "${x.serviceName}". Call anyway?`))return{error:'Call cancelled.'};
+        const was=x.status;markCalled(x,cid);return{ticket:x,action:was==='No Show'?'Recalled (from No Show)':'Called (selected)',detail:cname};
+      });ann=true;
+    }else if(kind==='cancel'){
+      const reason=prompt(`Cancel ticket ${t.number}? Enter a reason (optional):`,'');if(reason===null)return;
+      r=await ticketTx(list=>{const x=list.find(z=>z.id===id);if(!x||(x.status!=='Waiting'&&x.status!=='Called'))return{error:'This ticket can no longer be cancelled.'};
+        x.status='Cancelled';x.cancelledAt=Date.now();x.cancelReason=reason;return{ticket:x,action:'Cancelled',detail:reason}});
+    }
+    await loadTickets();notify({type:'changed'});refreshQueue();
+    if(r&&r.ticket){toast(r.ticket.number+': '+r.action,'ok');if(ann)announce(r.ticket)}
+  }catch(e){toast(e.message,'err')}
+}
+function detailsModal(t){
+  const pii=can('viewPII')||(S.settings.security.operatorSeesName&&t.counterId===S.counterId&&['Called','Serving'].includes(t.status));
+  modal(`<h2>Ticket ${esc(t.number)}</h2>
+    <div class="row2">
+      <div><div class="muted">Status</div><span class="${stClass(t.status)}">${t.status}</span></div>
+      <div><div class="muted">Service</div>${esc(t.serviceName)} · ${esc(t.priorityName||'')}</div>
+      ${pii?`<div><div class="muted">Client</div><b>${esc([t.client.first,t.client.middle,t.client.last].filter(Boolean).join(' '))}</b></div>
+      <div><div class="muted">Phone</div>${esc(t.client.phone||'—')}</div>`:''}
+      <div><div class="muted">Registered</div>${fmtDate(t.registeredAt)} ${fmtTimeS(t.registeredAt)} by ${esc(t.registeredByName)}</div>
+      <div><div class="muted">Waiting time</div>${fmtDur(waitingOf(t))}</div>
+      <div><div class="muted">Counter</div>${esc(t.counterName||'—')}</div>
+      <div><div class="muted">Service duration</div>${fmtDur(t.serviceMs)}</div>
+    </div>
+    ${t.cancelReason?`<p><b>Cancel reason:</b> ${esc(t.cancelReason)}</p>`:''}
+    <h3>History</h3>
+    <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Action</th><th>By</th><th>Detail</th></tr></thead><tbody>
+    ${t.history.map(h=>`<tr><td>${fmtTimeS(h.at)}</td><td>${esc(h.action)}</td><td>${esc(h.by)}</td><td>${esc(h.detail||'')}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="btns" style="justify-content:flex-end;margin-top:14px">${can('reprint')?`<button class="btn" id="dPrint">Print Again</button>`:''}<button class="btn primary" id="dClose">Close</button></div>`,bg=>{
+      $('#dClose',bg).onclick=closeModal;const p=$('#dPrint',bg);if(p)p.onclick=()=>printTicket(t,true);
+    });
+}
+
+/* =====================================================================
+   PUBLIC DISPLAY (anonymous: queue numbers, service & counter only)
+   ===================================================================== */
+let dspStarted=false,dspLastCall=0,bannerTimer=null;
+function startDisplay(){
+  document.body.className='display';
+  document.documentElement.style.setProperty('--accent',S.settings.display.accent||'#3b82f6');
+  document.title='Public Queue Display';
+  if(!dspStarted){
+    dspStarted=true;
+    setInterval(()=>notify({type:'display-alive',audio:S.displayAudio}),4000);
+    notify({type:'display-alive',audio:false});
+    setInterval(async()=>{await loadTickets();renderDisplay()},5000); // safety net
+  }
+  renderDisplay(true);
+}
+function renderDisplay(full){
+  const ds=S.settings.display;
+  if(full||!$('.dsp')){
+    app.innerHTML=`<div class="dsp ${ds.theme==='light'?'light':''}">
+      <header class="dsp-h"><div class="dsp-biz">${esc(S.settings.businessName)}</div>
+        <div class="dsp-clock"><span class="t" id="dT"></span><span class="d" id="dD"></span></div></header>
+      <div class="dsp-main">
+        <div class="dsp-left">
+          <section class="dsp-panel dsp-now" id="dNow"></section>
+          <div class="dsp-ctrs ${ds.showCounters===false?'hide':''}" id="dCtrs"></div>
+        </div>
+        <section class="dsp-panel dsp-wait"><div class="dsp-lbl">Waiting Queue</div>
+          <div class="dsp-whead"><span>Number</span><span>${ds.showService?'Service':''}</span><span>Time Waiting</span></div>
+          <div class="dsp-wlist" id="dWait"></div></section>
+      </div>
+      <footer class="dsp-info" id="dInfo"></footer>
+    </div>
+    <div class="dsp-tools"><button id="dFull">Full screen</button></div>
+    ${S.displayAudio?'':`<div class="dsp-unlock" id="dUnlock"><div style="font-size:1.6rem;font-weight:800">Public Queue Display</div>
+      <div style="opacity:.75;max-width:520px">Click once to start. This enables voice announcements and full-screen mode (browsers require one click before playing sound).</div>
+      <button id="dStart">Start Display</button><a href="#" id="dSilent" style="color:#94a3b8">Continue without sound</a></div>`}`;
+    const st=$('#dStart');
+    if(st)st.onclick=()=>{
+      S.displayAudio=true;
+      try{const C=window.AudioContext||window.webkitAudioContext;S.ac=S.ac||new C();S.ac.resume()}catch(e){}
+      try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}
+      try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}catch(e){}
+      $('#dUnlock').remove();notify({type:'display-alive',audio:true});
+    };
+    const si=$('#dSilent');if(si)si.onclick=e=>{e.preventDefault();$('#dUnlock').remove()};
+    $('#dFull').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()};
+    tickDisplayClock();
+  }
+  const list=S.tickets;
+  const active=list.filter(t=>t.status==='Called'||t.status==='Serving').sort((a,b)=>b.lastCalledAt-a.lastCalledAt);
+  const now=active[0];
+  const dn=$('#dNow');
+  dn.innerHTML=`<div class="dsp-lbl">Now Serving</div>
+    <div class="dsp-num">${now?esc(now.number):'---'}</div>
+    <div class="dsp-proceed">PLEASE PROCEED TO</div>
+    <div class="dsp-counter">${now?esc(now.counterName):'—'}</div>
+    ${now&&ds.showService?`<div class="dsp-svc">${esc(now.serviceName)}</div>`:''}`;
+  if(now&&now.lastCalledAt>dspLastCall){
+    if(dspLastCall){dn.classList.remove('flash');void dn.offsetWidth;dn.classList.add('flash')}
+    dspLastCall=now.lastCalledAt;
+  }
+  $('#dCtrs').innerHTML=S.settings.counters.map(c=>{
+    const a=activeFor(list,c.id);
+    return a?`<div class="dsp-cbox busy">${esc(c.name)}<span class="cs3">${esc(a.number)}</span></div>`
+            :`<div class="dsp-cbox free">${esc(c.name)}<span class="cs3">Available</span></div>`;
+  }).join('');
+  const waiting=list.filter(t=>t.status==='Waiting').sort(queueSort);
+  const n=Math.max(1,+ds.maxWaiting||12);
+  const nowMs=Date.now();
+  $('#dWait').innerHTML=waiting.length?waiting.slice(0,n).map(t=>`<div class="dsp-wrow"><span class="wn">${esc(t.number)}</span>
+      <span class="ws">${ds.showService?esc(t.serviceName):''}</span>
+      <span class="wt">${fmtDur(nowMs-t.registeredAt)}<small>since ${fmtTime(t.registeredAt)}</small></span></div>`).join('')
+    +(waiting.length>n?`<div class="dsp-empty">+ ${waiting.length-n} more waiting</div>`:''):`<div class="dsp-empty">No one is waiting.</div>`;
+  $('#dInfo').innerHTML=`<span>People waiting: <b>${waiting.length}</b></span>
+    ${ds.showEstimate?`<span>Estimated wait: <b>${waiting.length?'~'+fmtDur(estimateMs()):'None'}</b></span>`:''}
+    <div class="ticker">${ds.ticker?`<span>${esc(ds.ticker)}</span>`:''}</div>`;
+}
+function tickDisplayClock(){const now=Date.now();const t=$('#dT'),d=$('#dD');if(t)t.textContent=fmtTime(now);if(d)d.textContent=fmtLongDate(now)}
+function showBanner(number,counter){
+  const old=$('.dsp-banner');if(old)old.remove();clearTimeout(bannerTimer);
+  const b=document.createElement('div');b.className='dsp-banner';
+  b.innerHTML=`${esc(number)}<small>Please proceed to ${esc(counter||'the counter')}</small>`;
+  document.body.appendChild(b);bannerTimer=setTimeout(()=>b.remove(),7000);
+  loadTickets().then(()=>renderDisplay());
+}
+
+/* =====================================================================
+   REPORTS
+   ===================================================================== */
+function vReports(){
+  const today=dayKey();
+  const f=S.report?S.report.f:{from:today,to:today,service:'',status:'',emp:''};
+  $('#main').innerHTML=`<div class="card" style="margin-bottom:18px">
+      <h2>Reports & Analytics</h2>
+      <div class="filters">
+        <label>From<input type="date" id="rFrom" value="${f.from}"></label>
+        <label>To<input type="date" id="rTo" value="${f.to}"></label>
+        <label>Service Type<select id="rSvc"><option value="">All services</option>${S.settings.services.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label>Queue Status<select id="rSt"><option value="">All statuses</option>${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></label>
+        <label>Employee<select id="rEmp"><option value="">All employees</option>${S.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label>
+        <div class="btns"><button class="btn primary" id="rRun">Run Report</button><button class="btn" id="rXlsx">Export Excel</button><button class="btn" id="rPdf">Export PDF</button></div>
+      </div>
+      <div class="muted">Exports contain queue numbers and activity only — client names and phone numbers are never exported.</div>
+    </div><div id="rOut"></div>`;
+  $('#rSvc').value=f.service;$('#rSt').value=f.status;$('#rEmp').value=f.emp;
+  $('#rRun').onclick=runReport;
+  $('#rXlsx').onclick=async()=>{await runReport();exportReportXlsx()};
+  $('#rPdf').onclick=async()=>{await runReport();exportReportPdf()};
+  runReport();
+}
+async function runReport(){
+  let f={from:$('#rFrom').value,to:$('#rTo').value,service:$('#rSvc').value,status:$('#rSt').value,emp:$('#rEmp').value};
+  if(!f.from||!f.to)return toast('Choose a date range.','err');
+  if(f.from>f.to)[f.from,f.to]=[f.to,f.from];
+  const all=await dbIndex('tickets','day',IDBKeyRange.bound(f.from,f.to));
+  const L=all.filter(t=>(!f.service||t.serviceId===f.service)&&(!f.status||t.status===f.status)&&
+    (!f.emp||[t.registeredBy,t.calledBy,t.servedBy,t.completedBy].includes(f.emp))).sort((a,b)=>a.registeredAt-b.registeredAt);
+  S.report={f,L,R:summarize(L)};renderReport();
+}
+function summarize(L){
+  const now=Date.now();
+  const st=computeStats(L,now);
+  const clients=new Set(L.map(t=>[t.client.first,t.client.last,t.client.phone].join('|').toLowerCase())).size;
+  const group=(key)=>{const m=new Map();L.forEach(t=>{const k=key(t);if(!m.has(k))m.set(k,[]);m.get(k).push(t)});return m};
+  const row=(list)=>{const s=computeStats(list,now);return{n:list.length,completed:s.completed,cancelled:s.cancelled,noShow:s.noShow,open:s.waiting+s.called+s.serving,avgWait:s.avgWait,longest:s.longestToday,avgService:s.avgService}};
+  const daily=[...group(t=>t.day)].sort((a,b)=>a[0]<b[0]?-1:1).map(([d,l])=>Object.assign({label:dayLabel(d)},row(l)));
+  const bySvc=[...group(t=>t.serviceName)].map(([s,l])=>Object.assign({label:s},row(l))).sort((a,b)=>b.n-a.n);
+  const hourly=Array(24).fill(0);L.forEach(t=>hourly[Math.floor(minutesOfDay(t.registeredAt)/60)]++);
+  return{st,clients,daily,bySvc,hourly};
+}
+function renderReport(){
+  const {L,R}=S.report,st=R.st;
+  const kpi=[['Total Clients Registered',R.clients],['Total Tickets Generated',st.total],['Completed Services',st.completed],['Cancelled Tickets',st.cancelled],['No-Shows',st.noShow],['Still Open',st.waiting+st.called+st.serving],
+    ['Average Waiting Time',fmtDur(st.avgWait)],['Longest Waiting Time',fmtDur(st.longestToday)],['Average Service Duration',fmtDur(st.avgService)]];
+  const multi=R.daily.length>1;
+  const series=multi?R.daily.map(d=>({l:d.label.slice(0,5),v:d.n})):R.hourly.map((v,h)=>({l:String(h),v})).filter((x,i)=>i>=5&&i<=21);
+  const mx=Math.max(1,...series.map(s=>s.v)),W=900,H=200,bw=W/series.length;
+  const chart=`<svg class="chart" viewBox="0 0 ${W} ${H+24}" preserveAspectRatio="none">${series.map((s,i)=>{const h=s.v/mx*(H-20);
+    return `<rect x="${i*bw+bw*.15}" y="${H-h}" width="${bw*.7}" height="${h}" rx="3" fill="#3b82f6"><title>${s.l}: ${s.v}</title></rect>
+    ${s.v?`<text x="${i*bw+bw/2}" y="${H-h-4}" text-anchor="middle" font-size="12" fill="#334155">${s.v}</text>`:''}
+    <text x="${i*bw+bw/2}" y="${H+16}" text-anchor="middle" font-size="11" fill="#64748b">${s.l}${multi?'':':00'}</text>`}).join('')}</svg>`;
+  const tbl=(rows)=>`<div class="tbl-wrap"><table><thead><tr><th></th><th>Tickets</th><th>Completed</th><th>Cancelled</th><th>No-Show</th><th>Open</th><th>Avg Wait</th><th>Longest Wait</th><th>Avg Service</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><b>${esc(r.label)}</b></td><td>${r.n}</td><td>${r.completed}</td><td>${r.cancelled}</td><td>${r.noShow}</td><td>${r.open}</td><td>${fmtDur(r.avgWait)}</td><td>${fmtDur(r.longest)}</td><td>${fmtDur(r.avgService)}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">No data.</td></tr>'}</tbody></table></div>`;
+  $('#rOut').innerHTML=`<div class="stats">${kpi.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
+    <div class="grid2" style="margin-bottom:18px">
+      <div class="card"><h2>${multi?'Daily Queue Activity (tickets per day)':'Queue Activity by Hour (registrations)'}</h2>${chart}</div>
+      <div class="card"><h2>By Service Type</h2>${tbl(R.bySvc)}</div>
+    </div>
+    <div class="card" style="margin-bottom:18px"><h2>Daily Queue Activity</h2>${tbl(R.daily)}</div>
+    <div class="card"><h2>Ticket Detail (${L.length})</h2><div class="tbl-wrap" style="max-height:480px"><table><thead><tr>
+      <th>Queue #</th><th>Date</th><th>Registered</th><th>Service</th><th>Status</th><th>Counter</th><th>Wait</th><th>Service Time</th><th>Registered By</th><th>Called By</th><th>Completed By</th></tr></thead><tbody>
+      ${L.slice(0,1000).map(t=>`<tr><td class="num">${esc(t.number)}</td><td>${dayLabel(t.day)}</td><td>${fmtTime(t.registeredAt)}</td><td>${esc(t.serviceName)}</td><td><span class="${stClass(t.status)}">${t.status}</span></td><td>${esc(t.counterName||'—')}</td><td>${fmtDur(waitingOf(t))}</td><td>${fmtDur(t.serviceMs)}</td><td>${esc(t.registeredByName||'')}</td><td>${esc(t.calledByName||'')}</td><td>${esc(t.completedByName||'')}</td></tr>`).join('')}
+      </tbody></table></div>${L.length>1000?'<p class="muted">Showing first 1,000 rows. Exports include every row.</p>':''}</div>`;
+}
+function reportFilterText(f){
+  const u=S.users.find(x=>x.id===f.emp),s=serviceById(f.service);
+  return `Period: ${dayLabel(f.from)} – ${dayLabel(f.to)} · Service: ${s?s.name:'All'} · Status: ${f.status||'All'} · Employee: ${u?u.name:'All'}`;
+}
+function exportReportXlsx(){
+  const {f,L,R}=S.report,st=R.st;
+  const summary=[['Metric','Value'],['Report','Queue Activity Report'],['Business',S.settings.businessName],['Filters',reportFilterText(f)],['Generated',fmtDate(Date.now())+' '+fmtTime(Date.now())],[],
+    ['Total clients registered',R.clients],['Total tickets generated',st.total],['Total completed services',st.completed],['Total cancelled tickets',st.cancelled],['Total no-shows',st.noShow],['Still open',st.waiting+st.called+st.serving],
+    ['Average waiting time (min)',mins(st.avgWait)],['Longest waiting time (min)',mins(st.longestToday)],['Average service duration (min)',mins(st.avgService)]];
+  const head=['Tickets','Completed','Cancelled','No-Show','Open','Avg Wait (min)','Longest Wait (min)','Avg Service (min)'];
+  const r2=r=>[r.n,r.completed,r.cancelled,r.noShow,r.open,mins(r.avgWait),mins(r.longest),mins(r.avgService)];
+  const daily=[['Date',...head],...R.daily.map(r=>[r.label,...r2(r)])];
+  const svc=[['Service',...head],...R.bySvc.map(r=>[r.label,...r2(r)])];
+  const det=[['Queue Number','Date','Registered Time','Service','Priority','Status','Counter','Called Time','Wait (min)','Service Start','Completed Time','Service Duration (min)','Times Called','Registered By','Called By','Completed By','Cancel Reason'],
+    ...L.map(t=>[t.number,dayLabel(t.day),fmtTime(t.registeredAt),t.serviceName,t.priorityName||'',t.status,t.counterName||'',t.calledAt?fmtTime(t.calledAt):'',mins(waitingOf(t)),t.servingAt?fmtTime(t.servingAt):'',t.completedAt?fmtTime(t.completedAt):'',mins(t.serviceMs),t.callCount||0,t.registeredByName||'',t.calledByName||'',t.completedByName||'',t.cancelReason||''])];
+  const blob=buildXlsx([{name:'Summary',rows:summary},{name:'Daily Activity',rows:daily},{name:'By Service',rows:svc},{name:'Tickets',rows:det}]);
+  download(blob,`Queue-Report_${f.from}_to_${f.to}.xlsx`);
+  addLog('Exported report (Excel)',null,reportFilterText(f));
+}
+function exportReportPdf(){
+  const {f,L,R}=S.report,st=R.st;
+  const t=(rows,head)=>`<table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const r2=r=>[r.label,r.n,r.completed,r.cancelled,r.noShow,r.open,fmtDur(r.avgWait),fmtDur(r.longest),fmtDur(r.avgService)];
+  const hd=['','Tickets','Completed','Cancelled','No-Show','Open','Avg Wait','Longest','Avg Service'];
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Queue Report ${f.from} to ${f.to}</title><style>
+    @page{size:A4;margin:14mm}body{font-family:Arial,sans-serif;font-size:10.5px;color:#000}
+    h1{font-size:18px;margin:0}h2{font-size:13px;margin:16px 0 6px;border-bottom:2px solid #000;padding-bottom:3px}
+    table{width:100%;border-collapse:collapse;margin-bottom:6px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}th{background:#eee}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.kpi div{border:1px solid #999;padding:6px}.kpi b{display:block;font-size:15px}
+  </style></head><body>
+    <h1>${esc(S.settings.businessName)} — Queue Activity Report</h1>
+    <div>${esc(reportFilterText(f))}</div><div>Generated ${fmtDate(Date.now())} ${fmtTime(Date.now())} by ${esc(S.user.name)}</div>
+    <h2>Summary</h2><div class="kpi">
+      ${[['Clients registered',R.clients],['Tickets generated',st.total],['Completed services',st.completed],['Cancelled',st.cancelled],['No-shows',st.noShow],['Still open',st.waiting+st.called+st.serving],['Average wait',fmtDur(st.avgWait)],['Longest wait',fmtDur(st.longestToday)],['Avg service duration',fmtDur(st.avgService)]].map(([k,v])=>`<div>${k}<b>${v}</b></div>`).join('')}
+    </div>
+    <h2>Daily Queue Activity</h2>${t(R.daily.map(r2),hd)}
+    <h2>By Service Type</h2>${t(R.bySvc.map(r2),hd)}
+    <h2>Ticket Detail</h2>${t(L.map(x=>[x.number,dayLabel(x.day),fmtTime(x.registeredAt),x.serviceName,x.status,x.counterName||'',fmtDur(waitingOf(x)),fmtDur(x.serviceMs),x.calledByName||'']),['Queue #','Date','Registered','Service','Status','Counter','Wait','Service Time','Called By'])}
+  </body></html>`;
+  toast('In the print window, choose "Save as PDF" as the destination.');
+  printHTML(html);addLog('Exported report (PDF)',null,reportFilterText(f));
+}
+
+/* ---------- minimal XLSX writer (no external libraries) ---------- */
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function zipStore(files){
+  const enc=new TextEncoder(),out=[],central=[];let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name),data=typeof f.data==='string'?enc.encode(f.data):f.data,crc=crc32(data),sz=data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);lh.setUint16(10,0,true);lh.setUint16(12,0x21,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,sz,true);lh.setUint32(22,sz,true);lh.setUint16(26,name.length,true);lh.setUint16(28,0,true);
+    out.push(new Uint8Array(lh.buffer),name,data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(10,0,true);ch.setUint16(12,0,true);ch.setUint16(14,0x21,true);
+    ch.setUint32(16,crc,true);ch.setUint32(20,sz,true);ch.setUint32(24,sz,true);ch.setUint16(28,name.length,true);
+    ch.setUint32(42,off,true);
+    central.push(new Uint8Array(ch.buffer),name);
+    off+=30+name.length+sz;
+  }
+  const cdSize=central.reduce((a,b)=>a+b.length,0);
+  const end=new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true);end.setUint16(8,files.length,true);end.setUint16(10,files.length,true);end.setUint32(12,cdSize,true);end.setUint32(16,off,true);
+  return new Blob([...out,...central,new Uint8Array(end.buffer)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xe=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+const colName=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+function sheetXml(rows){
+  const widths=[];rows.forEach(r=>r.forEach((v,j)=>{widths[j]=Math.min(60,Math.max(widths[j]||8,String(v??'').length+2))}));
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+  if(widths.length)x+='<cols>'+widths.map((w,j)=>`<col min="${j+1}" max="${j+1}" width="${w}" customWidth="1"/>`).join('')+'</cols>';
+  x+='<sheetData>';
+  rows.forEach((r,i)=>{
+    x+=`<row r="${i+1}">`;
+    r.forEach((v,j)=>{
+      const ref=colName(j)+(i+1),s=i===0?' s="1"':'';
+      if(v===''||v==null)return;
+      if(typeof v==='number'&&isFinite(v))x+=`<c r="${ref}"${s}><v>${v}</v></c>`;
+      else x+=`<c r="${ref}" t="inlineStr"${s}><is><t xml:space="preserve">${xe(v)}</t></is></c>`;
+    });
+    x+='</row>';
+  });
+  return x+'</sheetData></worksheet>';
+}
+function buildXlsx(sheets){
+  const ns='http://schemas.openxmlformats.org';
+  const files=[
+    {name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${ns}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`},
+    {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${ns}/package/2006/relationships"><Relationship Id="rId1" Type="${ns}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${ns}/spreadsheetml/2006/main" xmlns:r="${ns}/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xe(s.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${ns}/package/2006/relationships">${sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="${ns}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="${ns}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${ns}/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs></styleSheet>`},
+    ...sheets.map((s,i)=>({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(s.rows)}))
+  ];
+  return zipStore(files);
+}
+function download(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+
+/* =====================================================================
+   ACTIVITY LOG
+   ===================================================================== */
+function vLogs(){
+  const today=dayKey();
+  $('#main').innerHTML=`<div class="card"><h2>Employee Activity Log</h2>
+    <div class="filters">
+      <label>From<input type="date" id="lFrom" value="${today}"></label><label>To<input type="date" id="lTo" value="${today}"></label>
+      <label>Employee<select id="lEmp"><option value="">All employees</option><option value="system">System</option>${S.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select></label>
+      <label style="flex:1">Search<input id="lQ" placeholder="Action or queue number"></label>
+      <div class="btns"><button class="btn primary" id="lRun">Show</button><button class="btn" id="lX">Export Excel</button></div>
+    </div><div id="lOut"></div></div>`;
+  let rows=[];
+  const run=async()=>{
+    let a=$('#lFrom').value,b=$('#lTo').value;if(a>b)[a,b]=[b,a];
+    const emp=$('#lEmp').value,q=$('#lQ').value.trim().toLowerCase();
+    rows=(await idb('logs','readonly',s=>s.index('day').getAll(IDBKeyRange.bound(a,b)))).filter(l=>(!emp||l.userId===emp)&&(!q||(l.action+' '+l.number+' '+l.detail).toLowerCase().includes(q))).sort((x,y)=>y.at-x.at);
+    $('#lOut').innerHTML=`<div class="muted" style="margin-bottom:8px">${rows.length} entries</div><div class="tbl-wrap" style="max-height:600px"><table><thead><tr><th>Date</th><th>Time</th><th>Employee</th><th>Action</th><th>Queue #</th><th>Detail</th></tr></thead><tbody>
+      ${rows.slice(0,2000).map(l=>`<tr><td>${fmtDate(l.at)}</td><td>${fmtTimeS(l.at)}</td><td>${esc(l.userName)}</td><td>${esc(l.action)}</td><td class="num">${esc(l.number)}</td><td>${esc(l.detail)}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">No activity.</td></tr>'}</tbody></table></div>`;
+  };
+  $('#lRun').onclick=run;$('#lQ').oninput=run;$('#lEmp').onchange=run;
+  $('#lX').onclick=async()=>{await run();download(buildXlsx([{name:'Activity Log',rows:[['Date','Time','Employee','Action','Queue Number','Detail'],...rows.map(l=>[fmtDate(l.at),fmtTimeS(l.at),l.userName,l.action,l.number,l.detail])]}]),`Activity-Log_${$('#lFrom').value}_to_${$('#lTo').value}.xlsx`)};
+  run();
+}
+
+/* =====================================================================
+   SETTINGS (Administrator)
+   ===================================================================== */
+function getPath(o,p){return p.split('.').reduce((x,k)=>x==null?x:x[k],o)}
+function setPath(o,p,v){const k=p.split('.');let x=o;for(let i=0;i<k.length-1;i++)x=x[k[i]];x[k[k.length-1]]=v}
+const bi=(path,attrs='')=>`<input data-bind="${path}" value="${esc(getPath(D,path)??'')}" ${attrs}>`;
+const bsel=(path,opts,num)=>`<select data-bind="${path}" ${num?'data-type="num"':''}>${opts.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${String(getPath(D,path))===String(v)?'selected':''}>${esc(l)}</option>`}).join('')}</select>`;
+const bchk=(path,label)=>`<label class="chk"><input type="checkbox" data-bind="${path}" ${getPath(D,path)?'checked':''}> ${label}</label>`;
+function vSettings(){
+  if(!D)D=JSON.parse(JSON.stringify(S.settings));
+  let zones=[];try{zones=Intl.supportedValuesOf('timeZone')}catch(e){}
+  if(!zones.length)zones=['Pacific/Pago_Pago','Pacific/Honolulu','America/Anchorage','America/Los_Angeles','America/Denver','America/Chicago','America/New_York','Pacific/Guam','Pacific/Auckland','Australia/Sydney','Asia/Manila','Europe/London','UTC'];
+  if(!zones.includes(D.timezone))zones.unshift(D.timezone);
+  const voices=('speechSynthesis' in window)?speechSynthesis.getVoices():[];
+  const svcOpts=D.services;
+  const ex=formatNumber('TUF',1).replace(/\d+$/,m=>String(1).padStart(Math.max(4,+D.numbering.digits||4),'0'));
+  $('#main').innerHTML=`<div id="setRoot">
+  <div class="grid2">
+   <div>
+    <section class="card set-sec"><h2>Business</h2>
+      <div class="row2"><label>Business Name (shown on tickets & display)${bi('businessName','maxlength="60"')}</label>
+      <label>Time Zone${bsel('timezone',zones)}</label></div>
+      <div class="row3"><label>Opens${bi('hours.open','type="time"')}</label><label>Closes${bi('hours.close','type="time"')}</label>
+      <label>Registration Outside Hours${bsel('hours.outsideHours',[['warn','Warn, allow override'],['block','Block'],['off','Allow (no warning)']])}</label></div>
+      <div class="cs">${WD.map((d,i)=>`<label><input type="checkbox" data-day="${i}" ${D.hours.days.map(Number).includes(i)?'checked':''}> ${d}</label>`).join('')}</div>
+    </section>
+    <section class="card set-sec"><h2>Queue Numbering</h2>
+      <div class="row3"><label>Number Digits${bsel('numbering.digits',[[4,'4 digits (0001) — standard'],[5,'5 digits (00001)'],[6,'6 digits (000001)']],true)}</label>
+      <label>Short-Name Padding Letter${bsel('numbering.padChar',['X','Z','Q','A'])}</label>
+      <label>Daily Numbering Reset${bsel('numbering.dailyReset',[['true','Reset to 0001 each business day'],['false','Never reset (continuous)']])}</label></div>
+      <p class="muted">Format: first three letters of the last name + one sequence shared by all clients, e.g. <b>${esc(ex)}</b>, SMI-0002, LEV-0003. Short names are padded (e.g. "Le" → LEX). Numbers are never reused.</p>
+    </section>
+    <section class="card set-sec"><h2>Service Categories</h2>
+      ${D.services.map((s,i)=>`<div class="list-row"><input type="text" data-bind="services.${i}.name" value="${esc(s.name)}" maxlength="50">
+        ${bchk(`services.${i}.active`,'Active')}<button class="btn sm bad" data-del="services" data-i="${i}">Remove</button></div>`).join('')}
+      <button class="btn sm" data-add="services">+ Add Service</button>
+    </section>
+    <section class="card set-sec"><h2>Queue Priority Levels</h2>
+      <p class="muted">Higher rank is called first. Within the same rank, clients are called in registration order.</p>
+      ${D.priorities.map((p,i)=>`<div class="list-row"><input type="text" data-bind="priorities.${i}.name" value="${esc(p.name)}" maxlength="50">
+        <label class="chk">Rank ${bsel(`priorities.${i}.rank`,[0,1,2,3,4,5],true)}</label><button class="btn sm bad" data-del="priorities" data-i="${i}">Remove</button></div>`).join('')}
+      <button class="btn sm" data-add="priorities">+ Add Priority Level</button>
+    </section>
+    <section class="card set-sec"><h2>Service Counters (${D.counters.length})</h2>
+      <p class="muted">Tick the services each counter handles. Leave all unticked to serve every service.</p>
+      ${D.counters.map((c,i)=>`<div style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px">
+        <div class="list-row" style="margin:0"><input type="text" data-bind="counters.${i}.name" value="${esc(c.name)}" maxlength="40"><button class="btn sm bad" data-del="counters" data-i="${i}">Remove</button></div>
+        <div class="cs">${svcOpts.map(s=>`<label><input type="checkbox" data-cs="${i}" value="${s.id}" ${(c.services||[]).includes(s.id)?'checked':''}> ${esc(s.name)}</label>`).join('')}</div></div>`).join('')}
+      <button class="btn sm" data-add="counters">+ Add Counter</button>
+    </section>
+   </div>
+   <div>
+    <section class="card set-sec"><h2>Printer & Ticket</h2>
+      <div class="row3"><label>Ticket Size${bsel('printer.paper',[['80','80 mm thermal'],['58','58 mm thermal']])}</label>
+      <label>Copies${bsel('printer.copies',[1,2,3],true)}</label>
+      <label>Print After Registration${bsel('printer.autoPrint',[['true','Automatically'],['false','Manually (Print Again)']])}</label></div>
+      ${bchk('printer.showService','Show service name on ticket (never the client name)')}
+      <div class="row2" style="margin-top:10px"><label>Ticket Message Line 1${bi('printer.line1','maxlength="70"')}</label><label>Ticket Message Line 2${bi('printer.line2','maxlength="70"')}</label></div>
+      <div class="help">For printing with no dialog box, set the thermal printer as the computer's default and start Chrome or Edge with the <b>--kiosk-printing</b> option. Otherwise the print dialog opens automatically and staff press Print.</div>
+      <button class="btn sm" id="testPrint">Print Test Ticket</button>
+    </section>
+    <section class="card set-sec"><h2>Public Display</h2>
+      <div class="row3"><label>Theme${bsel('display.theme',[['dark','Dark (TV)'],['light','Light']])}</label>
+      <label>Accent Color${bi('display.accent','type="color"')}</label>
+      <label>Waiting Numbers Shown (right side)${bsel('display.maxWaiting',[6,8,10,12,15],true)}</label></div>
+      ${bchk('display.showService','Show service type')} ${bchk('display.showEstimate','Show estimated waiting time')} ${bchk('display.showCounters','Show counter status (Available / now serving)')}
+      <label style="margin-top:10px">Scrolling Message${bi('display.ticker','maxlength="200"')}</label>
+    </section>
+    <section class="card set-sec"><h2>Announcements (Text-to-Speech)</h2>
+      <div class="row3"><label>Announcements${bsel('announce.enabled',[['true','On'],['false','Off']])}</label>
+      <label>Play On${bsel('announce.target',[['display','Public display (falls back to operator)'],['operator','Operator computer'],['both','Both']])}</label>
+      <label>Repeat${bsel('announce.repeat',[[1,'Once'],[2,'Twice'],[3,'Three times']],true)}</label></div>
+      <div class="row3"><label>Voice<select data-bind="announce.voice"><option value="">System default</option>${voices.map(v=>`<option value="${esc(v.name)}" ${v.name===D.announce.voice?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}</select></label>
+      <label>Volume<input type="range" min="0" max="1" step="0.05" data-bind="announce.volume" data-type="num" value="${D.announce.volume}"></label>
+      <label>Speed<input type="range" min="0.5" max="1.4" step="0.05" data-bind="announce.rate" data-type="num" value="${D.announce.rate}"></label></div>
+      ${bchk('announce.chime','Play chime before announcement')} ${bchk('announce.spell','Spell out letters and digits (T U F, 0 0 0 1)')}
+      <label style="margin-top:10px">Announcement Wording <span class="muted">({number}, {counter}, {service})</span>${bi('announce.template','maxlength="160"')}</label>
+      <button class="btn sm" id="testVoice" style="margin-top:10px">Test Announcement</button>
+    </section>
+    <section class="card set-sec"><h2>Estimated Waiting Time</h2>
+      <div class="row2"><label>Calculation Method${bsel('estimate.method',[['service','People waiting × average service time ÷ counters'],['avgWait',"Average actual wait so far today"],['fixed','People waiting × fixed minutes ÷ counters']])}</label>
+      <label>Default / Fixed Minutes per Client${bsel('estimate.defaultMinutes',[2,3,4,5,6,8,10,12,15,20,25,30],true)}</label></div>
+    </section>
+    <section class="card set-sec"><h2>Security</h2>
+      <div class="row2"><label>Auto Sign-Out After Inactivity${bsel('security.autoLogoutMin',[[5,'5 minutes'],[10,'10 minutes'],[15,'15 minutes'],[30,'30 minutes'],[60,'1 hour'],[0,'Never']],true)}</label></div>
+      ${bchk('security.operatorSeesName','Queue operators may see the name of the client at their counter (to verify identity)')}
+    </section>
+   </div>
+  </div>
+  <div class="savebar"><button class="btn" id="setReset">Discard Changes</button><button class="btn primary" id="setSave">Save Settings</button></div>
+  </div>
+  <div class="grid2" style="margin-top:8px">
+    <section class="card set-sec" id="usersSec"></section>
+    <section class="card set-sec"><h2>Data & Backup</h2>
+      <p class="muted">All records (tickets, registrations, timestamps, service history, activity logs) are kept permanently in this browser's database on this computer. Back up regularly.</p>
+      <div class="btns"><button class="btn" id="bkExport">Download Full Backup (.json)</button><button class="btn" id="bkImport">Restore From Backup…</button></div>
+      <input type="file" id="bkFile" accept=".json,application/json" hidden>
+      <div class="help">Backups contain client personal information. Store them securely.</div>
+      <p class="muted" id="storeInfo"></p>
+    </section>
+  </div>`;
+  const root=$('#setRoot');
+  root.addEventListener('input',onDraft);root.addEventListener('change',onDraft);
+  $$('[data-add]',root).forEach(b=>b.onclick=()=>{
+    const k=b.dataset.add;
+    if(k==='services')D.services.push({id:uid('svc'),name:'New Service',active:true});
+    if(k==='priorities')D.priorities.push({id:uid('pri'),name:'New Priority',rank:1});
+    if(k==='counters')D.counters.push({id:uid('ctr'),name:'Counter '+(D.counters.length+1),services:[]});
+    vSettings();
+  });
+  $$('[data-del]',root).forEach(b=>b.onclick=()=>{
+    const k=b.dataset.del,i=+b.dataset.i;
+    if(D[k].length<=1)return toast('At least one entry is required.','err');
+    const rem=D[k].splice(i,1)[0];
+    if(k==='services')D.counters.forEach(c=>c.services=(c.services||[]).filter(x=>x!==rem.id));
+    vSettings();
+  });
+  $('#setReset').onclick=()=>{D=null;vSettings();toast('Changes discarded.')};
+  $('#setSave').onclick=async()=>{
+    for(const k of ['services','priorities','counters'])if(D[k].some(x=>!String(x.name||'').trim()))return toast('Every service, priority and counter needs a name.','err');
+    if(!D.services.some(s=>s.active))return toast('At least one service must be active.','err');
+    if(!D.hours.days.length)return toast('Select at least one operating day.','err');
+    D.numbering.dailyReset=String(D.numbering.dailyReset)==='true';
+    D.printer.autoPrint=String(D.printer.autoPrint)==='true';
+    D.announce.enabled=String(D.announce.enabled)==='true';
+    await saveSettings(D);await addLog('Updated system settings');
+    D=null;toast('Settings saved.','ok');render();
+  };
+  $('#testPrint').onclick=()=>{const keep=S.settings;S.settings=D;printHTML(ticketHTML({number:'TUF-0001',serviceName:(D.services[0]||{}).name||'',registeredAt:Date.now()}));S.settings=keep};
+  $('#testVoice').onclick=()=>{const keep=S.settings;S.settings=JSON.parse(JSON.stringify(D));S.settings.announce.enabled=true;
+    speak(announceText({number:'TUF-0001',counterName:(D.counters[0]||{}).name||'Counter 1',serviceName:(D.services[0]||{}).name}));S.settings=keep};
+  $('#bkExport').onclick=exportBackup;
+  $('#bkImport').onclick=()=>$('#bkFile').click();
+  $('#bkFile').onchange=importBackup;
+  if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(e=>{const el=$('#storeInfo');if(el)el.textContent=`Storage used: ${(e.usage/1048576).toFixed(1)} MB of ${(e.quota/1048576/1024).toFixed(1)} GB available.`});
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
+  renderUsers();
+}
+function onDraft(e){
+  const el=e.target;
+  if(el.dataset.day!==undefined){const d=+el.dataset.day;D.hours.days=D.hours.days.map(Number).filter(x=>x!==d);if(el.checked)D.hours.days.push(d);D.hours.days.sort();return}
+  if(el.dataset.cs!==undefined){const c=D.counters[+el.dataset.cs];c.services=(c.services||[]).filter(x=>x!==el.value);if(el.checked)c.services.push(el.value);return}
+  const p=el.dataset.bind;if(!p)return;
+  let v=el.type==='checkbox'?el.checked:el.value;
+  if(el.dataset.type==='num')v=el.value===''?0:+el.value;
+  setPath(D,p,v);
+}
+if('speechSynthesis' in window)speechSynthesis.onvoiceschanged=()=>{if(S.view==='settings'&&S.user&&!S.isDisplay&&$('#setRoot'))vSettings()};
+
+/* ---------- user management ---------- */
+function renderUsers(){
+  const el=$('#usersSec');if(!el)return;
+  el.innerHTML=`<h2>Users & Roles</h2>
+    <div class="tbl-wrap" style="margin-bottom:12px"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>
+    ${S.users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
+      <td><select data-urole="${u.id}">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${u.role===k?'selected':''}>${v}</option>`).join('')}</select></td>
+      <td><input type="checkbox" data-uact="${u.id}" ${u.active?'checked':''}></td>
+      <td><button class="btn sm" data-upin="${u.id}">Reset PIN</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <h3>Add User</h3>
+    <form id="addUser"><div class="row2">
+      <label>Full Name<input name="name" required maxlength="50"></label><label>Username<input name="username" required maxlength="30" pattern="[A-Za-z0-9._-]+"></label>
+      <label>Role<select name="role">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
+      <label>Starting PIN (4–12 digits)<input name="pin" type="password" inputmode="numeric" pattern="\\d{4,12}" required></label></div>
+      <button class="btn primary">Add User</button> <span class="muted">New users must change their PIN at first sign-in.</span></form>
+    <div class="help" style="margin-top:12px"><b>Administrator</b>: everything · <b>Front Desk</b>: register, print/reprint, view queue · <b>Queue Operator</b>: call, recall, serve, complete · <b>Public Display</b>: display only.</div>`;
+  const admins=()=>S.users.filter(u=>u.role==='admin'&&u.active).length;
+  $$('[data-urole]',el).forEach(s=>s.onchange=async()=>{
+    const u=S.users.find(x=>x.id===s.dataset.urole);
+    if(u.role==='admin'&&s.value!=='admin'&&admins()<=1){toast('At least one active Administrator is required.','err');return renderUsers()}
+    u.role=s.value;await dbPut('users',u);await addLog('Changed user role',null,u.name+' → '+ROLES[u.role]);notify({type:'users'});toast('Role updated.','ok');
+    if(u.id===S.user.id){S.user=u;render()}
+  });
+  $$('[data-uact]',el).forEach(c=>c.onchange=async()=>{
+    const u=S.users.find(x=>x.id===c.dataset.uact);
+    if(!c.checked&&(u.id===S.user.id||(u.role==='admin'&&admins()<=1))){toast('You cannot deactivate yourself or the last Administrator.','err');return renderUsers()}
+    u.active=c.checked;await dbPut('users',u);await addLog(u.active?'Activated user':'Deactivated user',null,u.name);notify({type:'users'});toast('User updated.','ok');
+  });
+  $$('[data-upin]',el).forEach(b=>b.onclick=async()=>{
+    const u=S.users.find(x=>x.id===b.dataset.upin);
+    const p=prompt(`New temporary PIN for ${u.name} (4–12 digits):`);if(p===null)return;
+    if(!/^\d{4,12}$/.test(p))return toast('PIN must be 4–12 digits.','err');
+    u.salt=uid();u.pin=await hashPin(p,u.salt);u.mustChange=u.id!==S.user.id;await dbPut('users',u);await addLog('Reset user PIN',null,u.name);notify({type:'users'});toast('PIN reset.','ok');
+  });
+  $('#addUser',el).onsubmit=async e=>{
+    e.preventDefault();const f=e.target;const un=f.username.value.trim().toLowerCase();
+    if(S.users.some(u=>u.username===un))return toast('That username already exists.','err');
+    const salt=uid();
+    const u={id:uid('u'),name:f.name.value.trim(),username:un,role:f.role.value,active:true,salt,pin:await hashPin(f.pin.value,salt),mustChange:true,created:Date.now()};
+    await dbPut('users',u);S.users.push(u);await addLog('Added user',null,u.name+' ('+ROLES[u.role]+')');notify({type:'users'});toast('User added.','ok');renderUsers();
+  };
+}
+
+/* ---------- backup / restore ---------- */
+async function exportBackup(){
+  const data={app:'QMS',version:1,exportedAt:new Date().toISOString(),tickets:await dbAll('tickets'),meta:await dbAll('meta'),users:await dbAll('users'),logs:await dbAll('logs')};
+  download(new Blob([JSON.stringify(data)],{type:'application/json'}),`QMS-Backup_${dayKey()}.json`);
+  addLog('Downloaded full backup');
+}
+async function importBackup(e){
+  const file=e.target.files[0];e.target.value='';if(!file)return;
+  let data;try{data=JSON.parse(await file.text())}catch(x){return toast('That file is not a valid backup.','err')}
+  if(data.app!=='QMS'||!Array.isArray(data.tickets))return toast('That file is not a QMS backup.','err');
+  if(!confirm(`Restore backup from ${data.exportedAt}? This replaces ALL current tickets, settings, users and logs on this computer.`))return;
+  await new Promise((res,rej)=>{
+    const t=db.transaction(['tickets','meta','users','logs'],'readwrite');
+    for(const st of ['tickets','meta','users','logs']){const s=t.objectStore(st);s.clear();(data[st]||[]).forEach(r=>s.put(r))}
+    t.oncomplete=res;t.onerror=()=>rej(t.error);
+  });
+  toast('Backup restored. Reloading…','ok');notify({type:'settings'});notify({type:'users'});notify({type:'changed'});
+  setTimeout(()=>location.reload(),800);
+}
+
+/* =====================================================================
+   TIMERS & START-UP
+   ===================================================================== */
+function startTimers(){
+  setInterval(()=>{
+    if(S.isDisplay){tickDisplayClock();return}
+    tickHeader();tickRegister();
+  },1000);
+  // waiting times refresh (spec: at least every minute) + day rollover + safety sync
+  setInterval(async()=>{
+    const d=dayKey();
+    if(S.currentDay&&d!==S.currentDay){S.currentDay=d;await closeStale();await loadTickets();refreshView();return}
+    S.currentDay=d;
+    if(S.isDisplay){renderDisplay();return}
+    if(S.user&&S.view==='queue'){await loadTickets();refreshQueue()}
+    // inactivity sign-out
+    const lim=+S.settings.security.autoLogoutMin;
+    if(S.user&&lim>0&&Date.now()-S.lastActivity>lim*60000)logout('Signed out after inactivity.');
+  },20000);
+  ['mousedown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,()=>{S.lastActivity=Date.now()},{passive:true}));
+}
+window.addEventListener('hashchange',()=>location.reload());
+async function init(){
+  if(!window.indexedDB){app.innerHTML='<p style="padding:30px">This browser does not support the local database required by the Queue Management System. Please use a current version of Chrome, Edge, Firefox or Safari.</p>';return}
+  try{
+    db=await openDB();
+    await loadSettings();await ensureAdmin();
+    S.currentDay=dayKey();
+    await closeStale();await loadTickets();
+    if(!S.isDisplay)restoreSession();
+    render();startTimers();
+  }catch(e){app.innerHTML=`<p style="padding:30px;color:#b91c1c">The system could not start: ${esc(e.message)}</p>`;console.error(e)}
+}
+init();
+</script>
+</body>
+</html>
