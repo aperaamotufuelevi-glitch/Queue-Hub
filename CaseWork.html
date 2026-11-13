@@ -80,6 +80,9 @@ td.num{font-weight:800;font-family:ui-monospace,Consolas,monospace;font-size:.95
 .cur{border-radius:12px;padding:18px;text-align:center;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff}
 .cur .n{font-size:3.2rem;font-weight:900;font-family:ui-monospace,Consolas,monospace;letter-spacing:2px}
 .cur .s{color:#cbd5e1;font-size:.9rem}
+.cb-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(170px,1.3fr) 90px auto;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line)}.cb-row:last-child{border-bottom:0}
+.cb-row.mine{background:#f8fafc}.cb-b{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:760px){.cb-row{grid-template-columns:1fr 1fr}.cb-b{grid-column:1/-1;justify-content:flex-start}}
 .opbtns{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
 .opbtns .btn{padding:14px 10px;font-size:.95rem;white-space:normal}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:6px}
@@ -842,7 +845,10 @@ function vQueue(){
         </div>
         <h3>Next up for this counter</h3><div class="nextup" id="nextUp"></div>
       </div>
-    </div>`:''}
+    </div>
+    <div class="card" id="ctrBoard" style="margin-bottom:18px"><h2 style="margin-top:0">Counters</h2>
+      <p class="muted" style="margin:-4px 0 8px">When a co-worker tells you their client is done, press <b>Done – call next</b> on their counter: it finishes that client and calls the next number to that counter.</p>
+      <div id="ctrBoardList"></div></div>`:''}
     <div class="card">
       <div class="filters">
         <label>Show<select id="fStatus"><option value="active">Active (Waiting / Called / Serving)</option><option value="">All of today</option>${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></label>
@@ -864,6 +870,8 @@ function vQueue(){
       S.counterId=id;sessionStorage.setItem('qms_counter',S.counterId);refreshQueue();
     };
     $$('[data-op]').forEach(b=>b.onclick=()=>doOp(b.dataset.op));
+    $('#ctrBoard').onclick=e=>{const b=e.target.closest('[data-cb]');if(!b||b.disabled)return;
+      const ops={donenext:['complete','next'],done:['complete'],again:['again'],next:['next']}[b.dataset.cb];if(ops)actForCounter(b.dataset.c,ops)};
   }
   refreshQueue();
 }
@@ -877,7 +885,7 @@ function fillCounterSelect(){
     avail.map(c=>`<option value="${c.id}" ${c.id===S.counterId?'selected':''}>${esc(c.name)}</option>`).join('');
   if(sel.dataset.h!==html){sel.innerHTML=html;sel.dataset.h=html}
   const busy=S.settings.counters.length-avail.length;
-  const note=$('#ctrNote');if(note)note.textContent=busy?`${busy} counter${busy>1?'s':''} currently serving — hidden from this list.`:'';
+  const note=$('#ctrNote');if(note)note.textContent=busy?`${busy} counter${busy>1?'s':''} currently serving — hidden from this list.`+(S.settings.counters.every(c=>activeFor(S.tickets,c.id))?' All counters are busy: use the Counters board below to finish a counter and call its next number.':''):'';
 }
 function renderDispStatus(){
   const d=$('#dispStatus');if(!d)return;
@@ -909,6 +917,7 @@ function refreshQueue(){
     set('next',!!S.counterId&&!has);set('again',has);set('serve',has&&cur.status==='Called');set('complete',has);
     set('noshow',has&&cur.status==='Called');set('cancel',has);set('recall',!!S.counterId);
     renderDispStatus();
+    renderCounterBoard(now);
   }
   // table
   let list=[...S.tickets];
@@ -989,6 +998,33 @@ async function doOp(op){
     await loadTickets();notify({type:'changed'});refreshQueue();
     if(r&&r.ticket){toast(r.ticket.number+': '+r.action,'ok');if(announceIt)announce(r.ticket)}
   }catch(e){toast(e.message,'err')}
+}
+/* Counters board: every counter with what it is doing, and buttons to act for it --
+   e.g. a co-worker says "done": finish their client and call the next number to their counter. */
+let cbBusy=false;
+function renderCounterBoard(now=Date.now()){
+  const box=$('#ctrBoardList');if(!box)return;
+  const cs=S.settings.counters||[];
+  if(!cs.length){box.innerHTML='<div class="muted">No counters yet. Add them in Settings.</div>';return}
+  box.innerHTML=cs.map(c=>{
+    const a=activeFor(S.tickets,c.id),wait=eligible(S.tickets,c.id).length,dis=cbBusy?' disabled':'';
+    const state=!a?'<span class="pill open">Available</span>':
+      `<span class="pill" style="background:${a.status==='Serving'?'#dbeafe;color:#1e3a8a':'#fef3c7;color:#92400e'}">${a.status==='Serving'?'Serving':'Called'} <b style="font-size:.95rem">${esc(a.number)}</b> · ${fmtDur(now-(a.servingAt||a.lastCalledAt||now))}</span>`;
+    const btns=a?`<button class="btn ok sm" data-cb="donenext" data-c="${c.id}"${dis}${wait?'':' title="No one is waiting for this counter"'}>✔ Done – call next</button><button class="btn sm" data-cb="done" data-c="${c.id}"${dis}>✔ Done</button><button class="btn sm" data-cb="again" data-c="${c.id}"${dis}>🔊 Call again</button>`:
+      `<button class="btn primary sm" data-cb="next" data-c="${c.id}"${wait?dis:' disabled title="No one is waiting for this counter"'}>▶ Call next</button>`;
+    return `<div class="cb-row${c.id===S.counterId?' mine':''}"><div class="cb-n"><b>${esc(c.name)}</b>${c.id===S.counterId?' <span class="muted">(you)</span>':''}</div><div class="cb-s">${state}</div><div class="cb-w muted">${wait} waiting</div><div class="cb-b">${btns}</div></div>`;
+  }).join('');
+}
+async function actForCounter(cid,ops){
+  if(cbBusy||!counterById(cid))return;cbBusy=true;renderCounterBoard();
+  const keep=S.counterId;
+  try{
+    S.counterId=cid;
+    for(const op of ops){
+      await doOp(op);
+      if(op==='complete'&&activeFor(S.tickets,cid))break;   // could not finish: do not call anyone
+    }
+  }finally{S.counterId=keep;cbBusy=false;refreshQueue()}
 }
 function markCalled(t,cid){
   const now=Date.now(),c=counterById(cid);
