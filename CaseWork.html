@@ -189,6 +189,7 @@ const PERMS={
 };
 const browserTZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'}catch(e){return 'UTC'}})();
 const DEFAULTS={
+  systemName:'Queue Management System',
   businessName:'QUEUE MANAGEMENT SYSTEM',
   timezone:browserTZ,
   hours:{open:'08:00',close:'17:00',days:[1,2,3,4,5],outsideHours:'warn'},
@@ -313,6 +314,10 @@ async function addLog(action,number,detail){
 }
 
 /* ---------------- settings ---------------- */
+function sysName(){return (S.settings&&String(S.settings.systemName||'').trim())||'Queue Management System'}
+/* the business name; while it is still the starting value (or empty) the System Name is used instead */
+function bizName(){const b=S.settings?String(S.settings.businessName||'').trim():'';return !b||/^queue management system$/i.test(b)?sysName():b}
+function setTabTitle(){try{document.title=S.isDisplay?bizName()+' — Display':sysName()}catch(e){}}
 function deepMerge(a,b){
   for(const k in b){
     if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])&&a[k]&&typeof a[k]==='object'&&!Array.isArray(a[k]))deepMerge(a[k],b[k]);
@@ -566,7 +571,7 @@ function announce(t){
 function ticketHTML(t){
   const p=S.settings.printer,w58=p.paper==='58';
   const one=`<div class="tk">
-    <div class="biz">${esc(S.settings.businessName||'QUEUE MANAGEMENT SYSTEM')}</div>
+    <div class="biz">${esc(bizName())}</div>
     <div class="rule"></div>
     <div class="lbl">YOUR QUEUE NUMBER</div>
     <div class="num">${esc(t.number)}</div>
@@ -629,8 +634,8 @@ function renderLogin(){
   const users=S.users.filter(u=>u.active);
   const first=S.users.length===1&&S.users[0].mustChange;
   app.innerHTML=`<div class="login"><div class="card">
-    <h1>${esc(S.settings.businessName)}</h1>
-    <p class="muted" style="margin-top:-6px">Queue Management System — staff sign-in</p>
+    <h1>${esc(bizName())}</h1>
+    <p class="muted" style="margin-top:-6px">${esc(sysName())} — staff sign-in</p>
     <form id="loginForm">
       <label style="margin-bottom:12px">User
         <select name="user">${users.map(u=>`<option value="${u.id}">${esc(u.name)} — ${ROLES[u.role]}</option>`).join('')}</select>
@@ -690,6 +695,7 @@ const VIEWS={
 };
 const allowedViews=()=>Object.keys(VIEWS).filter(k=>can(VIEWS[k].perm));
 function render(){
+  setTabTitle();
   if(S.isDisplay)return startDisplay();
   if(!S.user)return renderLogin();
   if(S.user.role==='display'){S.isDisplay=true;history.replaceState(null,'','#display');return startDisplay()}
@@ -697,7 +703,7 @@ function render(){
   const views=allowedViews();
   if(!views.includes(S.view))S.view=views[0];
   app.innerHTML=`<header class="top">
-      <div class="brand">${esc(S.settings.businessName)}${/^queue management system$/i.test(S.settings.businessName.trim())?'':'<small>QUEUE MANAGEMENT SYSTEM</small>'}</div>
+      <div class="brand">${esc(bizName())}${sysName().trim().toLowerCase()===bizName().trim().toLowerCase()?'':'<small>'+esc(sysName().toUpperCase())+'</small>'}</div>
       <nav class="nav">${views.map(v=>`<button data-v="${v}" class="${v===S.view?'on':''}">${VIEWS[v].label}</button>`).join('')}
         <button id="openDisplay">Public Display ↗</button></nav>
       <div class="sp"></div>
@@ -1058,7 +1064,7 @@ function renderDisplay(full){
   const ds=S.settings.display;
   if(full||!$('.dsp')){
     app.innerHTML=`<div class="dsp ${ds.theme==='light'?'light':''}">
-      <header class="dsp-h"><div class="dsp-biz">${esc(S.settings.businessName)}</div>
+      <header class="dsp-h"><div class="dsp-biz">${esc(bizName())}</div>
         <div class="dsp-clock"><span class="t" id="dT"></span><span class="d" id="dD"></span></div></header>
       <div class="dsp-main">
         <div class="dsp-left">
@@ -1199,7 +1205,7 @@ function reportFilterText(f){
 }
 function exportReportXlsx(){
   const {f,L,R}=S.report,st=R.st;
-  const summary=[['Metric','Value'],['Report','Queue Activity Report'],['Business',S.settings.businessName],['Filters',reportFilterText(f)],['Generated',fmtDate(Date.now())+' '+fmtTime(Date.now())],[],
+  const summary=[['Metric','Value'],['Report','Queue Activity Report'],['Business',bizName()],['Filters',reportFilterText(f)],['Generated',fmtDate(Date.now())+' '+fmtTime(Date.now())],[],
     ['Total clients registered',R.clients],['Total tickets generated',st.total],['Total completed services',st.completed],['Total cancelled tickets',st.cancelled],['Total no-shows',st.noShow],['Still open',st.waiting+st.called+st.serving],
     ['Average waiting time (min)',mins(st.avgWait)],['Longest waiting time (min)',mins(st.longestToday)],['Average service duration (min)',mins(st.avgService)]];
   const head=['Tickets','Completed','Cancelled','No-Show','Open','Avg Wait (min)','Longest Wait (min)','Avg Service (min)'];
@@ -1223,7 +1229,7 @@ function exportReportPdf(){
     table{width:100%;border-collapse:collapse;margin-bottom:6px}th,td{border:1px solid #999;padding:3px 5px;text-align:left}th{background:#eee}
     .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.kpi div{border:1px solid #999;padding:6px}.kpi b{display:block;font-size:15px}
   </style></head><body>
-    <h1>${esc(S.settings.businessName)} — Queue Activity Report</h1>
+    <h1>${esc(bizName())} — Queue Activity Report</h1>
     <div>${esc(reportFilterText(f))}</div><div>Generated ${fmtDate(Date.now())} ${fmtTime(Date.now())} by ${esc(S.user.name)}</div>
     <h2>Summary</h2><div class="kpi">
       ${[['Clients registered',R.clients],['Tickets generated',st.total],['Completed services',st.completed],['Cancelled',st.cancelled],['No-shows',st.noShow],['Still open',st.waiting+st.called+st.serving],['Average wait',fmtDur(st.avgWait)],['Longest wait',fmtDur(st.longestToday)],['Avg service duration',fmtDur(st.avgService)]].map(([k,v])=>`<div>${k}<b>${v}</b></div>`).join('')}
@@ -1340,6 +1346,7 @@ function vSettings(){
   <div class="grid2">
    <div>
     <section class="card set-sec"><h2>Business</h2>
+      <label style="margin-bottom:12px">System Name (the title on the sign-in screen, the header and the browser tab)${bi('systemName','maxlength="60" placeholder="Queue Management System"')}</label>
       <div class="row2"><label>Business Name (shown on tickets & display)${bi('businessName','maxlength="60"')}</label>
       <label>Time Zone${bsel('timezone',zones)}</label></div>
       <div class="row3"><label>Opens${bi('hours.open','type="time"')}</label><label>Closes${bi('hours.close','type="time"')}</label>
@@ -1377,7 +1384,8 @@ function vSettings(){
       <label>Copies${bsel('printer.copies',[1,2,3],true)}</label>
       <label>Print After Registration${bsel('printer.autoPrint',[['true','Automatically'],['false','Manually (Print Again)']])}</label></div>
       ${bchk('printer.showService','Show service name on ticket (never the client name)')}
-      <div class="row2" style="margin-top:10px"><label>Ticket Message Line 1${bi('printer.line1','maxlength="70"')}</label><label>Ticket Message Line 2${bi('printer.line2','maxlength="70"')}</label></div>
+      <label style="margin-top:10px;margin-bottom:10px">Ticket Message Line 1${bi('printer.line1','maxlength="70"')}</label>
+      <label style="margin-bottom:10px">Ticket Message Line 2${bi('printer.line2','maxlength="70"')}</label>
       <div class="help">For printing with no dialog box, set the thermal printer as the computer's default and start Chrome or Edge with the <b>--kiosk-printing</b> option. Otherwise the print dialog opens automatically and staff press Print.</div>
       <button class="btn sm" id="testPrint">Print Test Ticket</button>
     </section>
